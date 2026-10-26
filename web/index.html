@@ -188,6 +188,9 @@ const ITEMS=[];{let c,g,d;for(const r of RAW){c=r[2]||c;if(r[3]){g=r[3];d=undefi
 const CRY=[['BTC','比特幣','#f7931a'],['ETH','以太幣','#8c9eff'],['BNB','幣安幣','#f3ba2f'],['SOL','Solana','#c58cff'],['XRP','瑞波幣','#9aa7b8'],['DOGE','狗狗幣','#c2a633'],['ADA','Cardano','#5b8def'],['TRX','波場','#ff4d4f'],['AVAX','Avalanche','#e84142'],['LINK','Chainlink','#4a7dff'],['TON','Toncoin','#3aa0ff'],['DOT','Polkadot','#e6007a'],['LTC','萊特幣','#a6a9aa'],['BCH','比特幣現金','#8dc351'],['SHIB','柴犬幣','#f0a33a'],['SUI','Sui','#4da2ff'],['NEAR','NEAR','#7ad3b8'],['APT','Aptos','#9ad0c2'],['UNI','Uniswap','#ff4fa3'],['PEPE','佩佩幣','#4caf50']];
 for(const [k,n,col] of CRY)ITEMS.push({id:k+'USDT',n,code:k,col,c:'cry',g:'市值前 20（美元報價）',src:'b'});
 const BY={};ITEMS.forEach(i=>BY[i.id]=i);
+let CUSTOM=LS.get('gm_custom',[]);
+function addItem(c){if(BY[c.id])return;const it={id:c.id,n:c.n,c:'my',g:'我新增的',src:'y',d:2};ITEMS.push(it);BY[c.id]=it}
+CUSTOM.forEach(addItem);
 const CUR=[['TWD','新台幣'],['USD','美元'],['JPY','日圓'],['EUR','歐元'],['CNY','人民幣'],['GBP','英鎊'],['HKD','港幣'],['KRW','韓元'],['AUD','澳幣'],['SGD','新加坡幣'],['THB','泰銖'],['BTC','比特幣'],['ETH','以太幣']];
 const CURN={};CUR.forEach(c=>CURN[c[0]]=c[1]);
 
@@ -226,7 +229,7 @@ async function yQuote(id){
   const j=await yget(yurl(id,'1d','5m'));const r=j.chart.result[0],m=r.meta,qq=(r.indicators.quote||[{}])[0]||{};
   const cl=(qq.close||[]).filter(x=>x!=null);const op=(qq.open||[]).find(x=>x!=null);
   const tp=m.currentTradingPeriod&&m.currentTradingPeriod.regular;
-  Q[id]={p:m.regularMarketPrice,pv:m.previousClose!=null?m.previousClose:m.chartPreviousClose,o:op,h:m.regularMarketDayHigh,l:m.regularMarketDayLow,v:m.regularMarketVolume,s:cl.length>2?thin(cl,60):(Q[id]&&Q[id].s)||[],ps:tp?tp.start*1000:null,pe:tp?tp.end*1000:null,t:(m.regularMarketTime||0)*1000,h52:m.fiftyTwoWeekHigh,l52:m.fiftyTwoWeekLow};
+  Q[id]={p:m.regularMarketPrice,pv:m.previousClose!=null?m.previousClose:m.chartPreviousClose,o:op,h:m.regularMarketDayHigh,l:m.regularMarketDayLow,v:m.regularMarketVolume,s:cl.length>2?thin(cl,60):(Q[id]&&Q[id].s)||[],ps:tp?tp.start*1000:null,pe:tp?tp.end*1000:null,t:(m.regularMarketTime||0)*1000,h52:m.fiftyTwoWeekHigh,l52:m.fiftyTwoWeekLow,nm:m.shortName||m.longName||''};
   dirty=true;
 }
 function thin(a,n){if(a.length<=n)return a;const o=[],st=(a.length-1)/(n-1);for(let i=0;i<n;i++)o.push(a[Math.round(i*st)]);return o}
@@ -239,7 +242,7 @@ async function yRefresh(force){
   await Promise.all([work(),work(),work(),work()]);
   yBusy=false;if(ok){lastY=Date.now();LS.set('gm_q',Q)}dirty=true;
 }
-function tabCats(){return TAB==='home'?['idx','fx','more']:TAB==='watch'?['idx','fx','more']:[TAB]}
+function tabCats(){return TAB==='home'?['idx','fx','more']:TAB==='watch'?['my','idx','fx','more']:[TAB]}
 
 /* ---------- 幣安 即時 ---------- */
 const BSYM=ITEMS.filter(i=>i.src==='b').map(i=>i.id);
@@ -330,10 +333,11 @@ function selCell(i,k,v){return'<div class="cell" tabindex="0" data-cell="'+i+'" 
 
 /* ---------- 其他頁 ---------- */
 function vList(c){return groups(ITEMS.filter(i=>i.c===c))}
+function addRow(){return'<div class="lbl" style="margin-top:14px">新增股票／ETF／指數（輸入代號，可加空格與名稱）</div><div class="cell" id="addcell"><input id="addinp" placeholder="例如：2317 鴻海、00878、TSLA、9984.T" autocomplete="off" style="text-align:left"></div><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股直接打數字代號；美股打英文代號；其他市場加後綴，例如日股 .T、港股 .HK。按 Enter 加入。</div>'}
 function vWatch(){const list=WATCH.map(id=>BY[id]).filter(Boolean);
-  if(!list.length)return'<div class="empty">還沒有自選項目<br>進入任一項目的走勢頁，按右上角 ☆ 就能加入</div>';
+  if(!list.length)return'<div class="empty" style="padding-bottom:10px">還沒有自選項目<br>在下面輸入代號新增，或在走勢頁按右上角 ☆ 加入</div>'+addRow();
   let h='<div class="gh" style="padding-top:14px"><span>我的自選（'+list.length+'）</span><span>'+(EDIT?'<button class="chip" id="wdel" style="background:#2a1418;color:var(--up)">移除所選（'+SEL.size+'）</button> <button class="chip" id="wdone">完成</button>':'<button class="chip" id="wedit">編輯</button>')+'</span></div><div class="card" style="margin-top:4px;padding:2px 10px">';
-  return h+list.map(it=>rowHTML(it,{edit:EDIT})).join('')+'</div>'}
+  return h+list.map(it=>rowHTML(it,{edit:EDIT})).join('')+'</div>'+(EDIT?'':addRow())}
 function vSearch(qs){qs=qs.trim().toLowerCase();const r=ITEMS.filter(i=>(i.n+' '+i.id+' '+(i.code||'')+' '+(i.cur||'')).toLowerCase().includes(qs));return r.length?'<div class="card" style="padding:2px 10px">'+r.map(it=>rowHTML(it)).join('')+'</div>':'<div class="empty">找不到「'+esc(qs)+'」</div>'}
 
 /* ---------- 導覽 ---------- */
@@ -361,7 +365,7 @@ document.addEventListener('click',e=>{
   if(t.closest('#swap')){CONV={a:CONV.a,f:CONV.t,t:CONV.f};LS.set('gm_conv',CONV);render();return}
   if(t.closest('#wedit')){EDIT=true;SEL.clear();render();return}
   if(t.closest('#wdone')){EDIT=false;SEL.clear();render();return}
-  if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從自選移除這 '+SEL.size+' 個項目？')){WATCH=WATCH.filter(id=>!SEL.has(id));LS.set('gm_watch',WATCH);SEL.clear();EDIT=false;render()}return}
+  if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從自選移除這 '+SEL.size+' 個項目？')){WATCH=WATCH.filter(id=>!SEL.has(id));LS.set('gm_watch',WATCH);CUSTOM=CUSTOM.filter(c=>!SEL.has(c.id));LS.set('gm_custom',CUSTOM);SEL.clear();EDIT=false;render()}return}
   const ck=t.closest('[data-ck]');if(ck){ck.checked?SEL.add(ck.dataset.ck):SEL.delete(ck.dataset.ck);const b=$('#wdel');if(b)b.textContent='移除所選（'+SEL.size+'）';e.stopPropagation();return}
   if(EDIT&&t.closest('.row')){const r=t.closest('.row');const id=r.dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render();return}
   if(t.closest('.cell')||t.closest('.dd'))return;
@@ -390,10 +394,30 @@ function openDD(c){closeDD();const k=c.dataset.k;ddOpen=true;ddIdx=Math.max(0,CU
   d.addEventListener('click',e=>{const it=e.target.closest('[data-i]');if(it){pickDD(c,+it.dataset.i);e.stopPropagation()}})}
 function closeDD(){const d=document.querySelector('.dd');if(d)d.remove();if(ddOpen){ddOpen=false;dirty=true}}
 function pickDD(c,i){const k=c.dataset.k,ci=+c.dataset.cell;CONV[k]=CUR[i][0];LS.set('gm_conv',CONV);ddOpen=false;render(true);const n=cellEl((ci+1)%3);if(n)n.focus()}
-document.addEventListener('mousedown',e=>{const c=e.target.closest('.cell');if(c&&c.dataset.k!=='a'&&!e.target.closest('.dd')){if(document.activeElement===c){e.preventDefault();ddOpen?closeDD():openDD(c)}}});
-document.addEventListener('keydown',e=>{const c=e.target.closest&&e.target.closest('.cell');if(!c||c.dataset.k==='a')return;const ci=+c.dataset.cell;
+document.addEventListener('mousedown',e=>{const c=e.target.closest('.cell');if(c&&(c.dataset.k==='f'||c.dataset.k==='t')&&!e.target.closest('.dd')){if(document.activeElement===c){e.preventDefault();ddOpen?closeDD():openDD(c)}}});
+document.addEventListener('keydown',e=>{const c=e.target.closest&&e.target.closest('.cell');if(!c||(c.dataset.k!=='f'&&c.dataset.k!=='t'))return;const ci=+c.dataset.cell;
   if(ddOpen){const d=c.querySelector('.dd');if(!d)return;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();d.children[ddIdx].classList.remove('hi');ddIdx=(ddIdx+(e.key==='ArrowDown'?1:-1)+CUR.length)%CUR.length;d.children[ddIdx].classList.add('hi');d.children[ddIdx].scrollIntoView({block:'nearest'})}else if(e.key==='Enter'){e.preventDefault();pickDD(c,ddIdx)}else if(e.key==='Escape'){e.preventDefault();closeDD()}else if(e.key==='Tab'){closeDD()}return}
   if(e.key==='ArrowDown'){e.preventDefault();openDD(c)}else if(e.key==='ArrowUp'){e.preventDefault()}else if(e.key==='Enter'){e.preventDefault();nextCell(ci)}});
+
+/* ---------- 自行新增標的 ---------- */
+let adding=false;
+document.addEventListener('keydown',async e=>{if(e.target.id!=='addinp')return;const inp=e.target,cell=$('#addcell'),msg=$('#addmsg');
+  if(e.key==='Escape'){inp.value='';cell.classList.remove('err');return}
+  if(e.key!=='Enter'||adding)return;e.preventDefault();
+  const raw=inp.value.trim();if(!raw)return;
+  const sp=raw.split(/\s+/);let code=sp[0].toUpperCase();const name=sp.slice(1).join(' ');
+  const tries=/^\d{4,6}[A-Z]?$/.test(code)?[code+'.TW',code+'.TWO']:[code];
+  const hit=tries.find(t=>BY[t]);
+  if(hit){if(!WATCH.includes(hit)){WATCH.push(hit);LS.set('gm_watch',WATCH)}inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
+  adding=true;cell.classList.remove('err');msg.textContent='查詢中…';
+  let ok=null;for(const t of tries){try{await yQuote(t);if(Q[t]&&Q[t].p!=null){ok=t;break}}catch(x){}}
+  adding=false;
+  if(!ok){cell.classList.add('err');msg.innerHTML='<span class="up">找不到「'+esc(code)+'」，請確認代號（未儲存）</span>';return}
+  const c={id:ok,n:name||Q[ok].nm||ok};CUSTOM.push(c);LS.set('gm_custom',CUSTOM);addItem(c);
+  if(!WATCH.includes(ok)){WATCH.push(ok);LS.set('gm_watch',WATCH)}LS.set('gm_q',Q);
+  inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);
+});
+document.addEventListener('input',e=>{if(e.target.id==='addinp'){$('#addcell').classList.remove('err')}});
 
 /* ---------- 走勢頁 ---------- */
 const PER=[['d','日'],['w','週'],['m','月'],['y','年'],['a','全部']];
