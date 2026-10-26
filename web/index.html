@@ -61,10 +61,17 @@ header{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .hp{font-size:44px;font-weight:500;line-height:1.15;margin-top:6px;white-space:nowrap}
 .hst{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-top:12px;font-size:16px}
 .hst div{display:flex;justify-content:space-between;gap:6px;white-space:nowrap}
-.hm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
-.hm div{border-radius:11px;padding:11px 12px;cursor:pointer;min-width:0}
-.hm span{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f4f6f8}
-.hm b{display:block;font-size:21px;font-weight:500;margin-top:3px;color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.tile{border-radius:12px;padding:11px 11px;border:1px solid #223047;background:#111a29;min-width:0;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;transition:transform .15s,box-shadow .15s}
+.tile.u{background:#2a121a;border-color:#4a1d29}.tile.d{background:#0d2219;border-color:#17402f}
+.tn{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:15px}
+.tn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tn .spk{display:block}
+.tv{font-size:20px;font-weight:500;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc{display:flex;justify-content:space-between;align-items:center;gap:4px;margin-top:5px;font-size:14px;white-space:nowrap}
+.tc .pill{min-width:0;font-size:14px;padding:3px 7px}
+.tile.drag{transform:scale(1.05);box-shadow:0 8px 24px rgba(0,0,0,.6);border:2px dashed var(--gold);z-index:5;position:relative}
+.tiles.sorting .tile:not(.drag){opacity:.8}
 .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
 .mini{background:var(--card);border:1px solid var(--line);border-top-color:#3a3320;border-radius:16px;padding:14px;cursor:pointer;min-width:0}
 .mini .t{font-size:15px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -187,7 +194,7 @@ nav button.on{color:var(--gold)}
 
 <script>
 'use strict';
-const VER='v1.1';
+const VER='v1.2';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -301,9 +308,9 @@ function mstat(id){const it=BY[id],q=Q[id];if(!q)return'';if(it.src==='b')return
 function spark(a,w,h,col,base){if(!a||a.length<2)return'<svg class="spk" width="'+w+'" height="'+h+'"></svg>';let lo=Math.min(...a),hi=Math.max(...a);if(base!=null){lo=Math.min(lo,base);hi=Math.max(hi,base)}const r=hi-lo||1;const X=i=>(i*(w-2)/(a.length-1)+1).toFixed(1),Y=v=>(h-2-(v-lo)/r*(h-4)).toFixed(1);
   let d='';a.forEach((v,i)=>d+=(i?'L':'M')+X(i)+' '+Y(v));const b=base!=null?'<line x1="0" x2="'+w+'" y1="'+Y(base)+'" y2="'+Y(base)+'" stroke="#6b7686" stroke-width=".6" stroke-dasharray="2 2"/>':'';
   return'<svg class="spk" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+b+'<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linejoin="round"/></svg>'}
-function areaSvg(a,base,col){const w=320,h=90;if(!a||a.length<2)return'<div style="height:90px"></div>';let lo=Math.min(...a,base||Infinity),hi=Math.max(...a,base||-Infinity);const r=hi-lo||1;const X=i=>(i*w/(a.length-1)).toFixed(1),Y=v=>(h-4-(v-lo)/r*(h-10)).toFixed(1);
+function areaSvg(a,base,col,lbl){const w=320,h=110;if(!a||a.length<2)return'<div style="height:110px;display:flex;align-items:center;justify-content:center;color:#6b7686;font-size:14px">走勢載入中…</div>';let lo=Math.min(...a,base||Infinity),hi=Math.max(...a,base||-Infinity);const r=hi-lo||1;const X=i=>(i*w/(a.length-1)).toFixed(1),Y=v=>(h-4-(v-lo)/r*(h-10)).toFixed(1);
   let d='';a.forEach((v,i)=>d+=(i?'L':'M')+X(i)+' '+Y(v));const gid='g'+Math.random().toString(36).slice(2,7);
-  return'<svg width="100%" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="display:block;margin-top:10px;height:90px"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity=".35"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+(base?'<line x1="0" x2="'+w+'" y1="'+Y(base)+'" y2="'+Y(base)+'" stroke="#6b7686" stroke-width=".6" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>':'')+'<path d="'+d+' L'+w+' '+h+' L0 '+h+'Z" fill="url(#'+gid+')"/><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>'}
+  return'<svg width="100%" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="display:block;margin-top:10px;height:110px"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity=".35"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+(base?'<line x1="0" x2="'+w+'" y1="'+Y(base)+'" y2="'+Y(base)+'" stroke="#8792a2" stroke-width=".8" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>':'')+'<path d="'+d+' L'+w+' '+h+' L0 '+h+'Z" fill="url(#'+gid+')"/><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg>'+(lbl&&base?'<div class="mu n" style="text-align:right;margin-top:2px">虛線＝前收 '+fmt(base,2)+'</div>':'')}
 const COL={up:'#f6465d',dn:'#2ebd85',fl:'#8a94a3'};
 
 /* ---------- 列 ---------- */
@@ -317,14 +324,32 @@ function rowHTML(it,opt){opt=opt||{};const q=Q[it.id]||{};let p=q.p,pv=q.pv,name
   return'<div class="row" data-id="'+it.id+'">'+ck+ic+'<div class="rn"><div class="nm">'+esc(name)+'</div><div class="sb n">'+sub+'</div></div>'+spark(opt.rev&&q.s?q.s.map(x=>1/x):q.s,52,30,COL[s],null)+'<div class="rp n"><div class="pv'+flash(it.id+(opt.rev?'r':''),p)+'">'+fmt(p,d)+'</div><div>'+pill(pc)+'</div></div></div>'}
 function groups(list,opt){let h='',g=null;for(const it of list){if(it.g!==g){if(g!==null)h+='</div>';g=it.g;h+='<div class="gh"><span>'+esc(g)+'</span>'+(it.src==='b'?'<span class="mu">比 24 小時前</span>':'<span class="mu">比前一交易日收盤</span>')+'</div><div class="card" style="margin-top:4px;padding:2px 14px">'}h+=rowHTML(it,opt)}return h+(g!==null?'</div>':'')}
 
+/* ---------- 指數排序 ---------- */
+function idxOrder(){const all=ITEMS.filter(i=>i.c==='idx').map(i=>i.id);let o=LS.get('gm_idxorder',[]).filter(id=>all.includes(id));all.forEach(id=>{if(!o.includes(id))o.push(id)});return o}
+let drag=null,lp=null,lpP=null,noClick=false;
+function dStart(x,y,el){clearTimeout(lp);lp=setTimeout(()=>{drag={el,x,y};el.classList.add('drag');el.parentNode.classList.add('sorting');try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}},420);lpP={x,y}}
+function dMove(x,y,ev){if(!drag){if(lp&&lpP&&(Math.abs(x-lpP.x)>8||Math.abs(y-lpP.y)>8)){clearTimeout(lp);lp=null}return}
+  ev.preventDefault();const t=document.elementFromPoint(x,y),tile=t&&t.closest&&t.closest('.tile');
+  if(tile&&tile!==drag.el&&tile.parentNode===drag.el.parentNode){const p=tile.parentNode,ks=[...p.children],a=ks.indexOf(drag.el),b=ks.indexOf(tile);p.insertBefore(drag.el,a<b?tile.nextSibling:tile)}
+  const sy=40,vh=window.innerHeight;if(y<sy)window.scrollBy(0,-12);else if(y>vh-110)window.scrollBy(0,12)}
+function dEnd(){clearTimeout(lp);lp=null;if(!drag)return;const p=drag.el.parentNode;drag.el.classList.remove('drag');p.classList.remove('sorting');
+  LS.set('gm_idxorder',[...p.children].map(e=>e.dataset.id));drag=null;noClick=true;setTimeout(()=>{noClick=false},350);dirty=true}
+document.addEventListener('touchstart',e=>{const el=e.target.closest&&e.target.closest('.tile');if(el&&e.touches.length===1)dStart(e.touches[0].clientX,e.touches[0].clientY,el)},{passive:true});
+document.addEventListener('touchmove',e=>{if(lp||drag)dMove(e.touches[0].clientX,e.touches[0].clientY,e)},{passive:false});
+document.addEventListener('touchend',dEnd);document.addEventListener('touchcancel',dEnd);
+document.addEventListener('mousedown',e=>{const el=e.target.closest&&e.target.closest('.tile');if(el&&e.button===0)dStart(e.clientX,e.clientY,el)});
+document.addEventListener('mousemove',e=>{if(lp||drag)dMove(e.clientX,e.clientY,e)});
+document.addEventListener('mouseup',dEnd);
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.tile'))e.preventDefault()});
+
 /* ---------- 總覽 ---------- */
 function vHome(){
   const chipIds=[['^TWII','台股'],['^N225','日股'],['^HSI','港股'],['^GDAXI','歐股'],['^GSPC','美股']];
   let h='<div class="chips">'+chipIds.map(([id,n])=>{const s=mstat(id);return'<span class="chip'+(s==='開盤中'?' open':'')+'">'+n+' '+(s||'—')+'</span>'}).join('')+'<span class="chip open">加密 24h</span></div>';
   const q=Q['^TWII']||{},c=chg('^TWII'),s=c?sgn(c.d):'fl';
-  h+='<div class="card hero'+(s==='dn'?' d':'')+'" data-id="^TWII"><div class="ch"><span>台灣加權指數</span><span class="mu">'+(mstat('^TWII')||'TAIEX')+'</span></div><div class="hp n '+s+'"><span class="pv'+flash('h^TWII',q.p)+'" style="font-size:inherit">'+fmt(q.p,2)+'</span></div><div style="display:flex;gap:12px;align-items:center;margin-top:6px">'+pill(c?c.pc:null)+'<span class="n '+s+'" style="font-size:19px">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),2):'')+'</span></div>'+areaSvg(q.s,q.pv,COL[s])+'<div class="hst n"><div><span class="mu" style="font-size:15px">開盤</span><span>'+fmt(q.o,2)+'</span></div><div><span class="mu" style="font-size:15px">前收</span><span>'+fmt(q.pv,2)+'</span></div><div><span class="mu" style="font-size:15px">最高</span><span class="up">'+fmt(q.h,2)+'</span></div><div><span class="mu" style="font-size:15px">最低</span><span class="dn">'+fmt(q.l,2)+'</span></div></div></div>';
-  const idx=ITEMS.filter(i=>i.c==='idx');
-  h+='<div class="card"><div class="ch"><span>全球指數</span><span class="mu">比前一交易日</span></div><div class="hm n">'+idx.map(it=>{const c=chg(it.id);const v=c?c.pc:0;const k=Math.min(1,Math.abs(v)/2.5);const bg=c==null?'#1d2430':v>0?'rgba(232,56,79,'+(.3+k*.7)+')':v<0?'rgba(19,168,116,'+(.3+k*.7)+')':'#2a313d';return'<div data-id="'+it.id+'" style="background:'+bg+'"><span>'+esc(it.n)+'</span><b class="n">'+(c?(v>0?'+':'')+fmt(v,2)+'%':'—')+'</b></div>'}).join('')+'</div></div>';
+  h+='<div class="card hero'+(s==='dn'?' d':'')+'" data-id="^TWII"><div class="ch"><span>台灣加權指數</span><span class="mu">'+(mstat('^TWII')||'TAIEX')+(q.t?' · '+hm(q.t):'')+'</span></div>'+areaSvg(q.s,q.pv,COL[s],true)+'<div class="hp n '+s+'"><span class="pv'+flash('h^TWII',q.p)+'" style="font-size:inherit">'+fmt(q.p,2)+'</span></div><div style="display:flex;gap:12px;align-items:center;margin-top:6px">'+pill(c?c.pc:null)+'<span class="n '+s+'" style="font-size:19px">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),2):'')+'</span></div><div class="hst n"><div><span class="mu" style="font-size:15px">開盤</span><span>'+fmt(q.o,2)+'</span></div><div><span class="mu" style="font-size:15px">前收</span><span>'+fmt(q.pv,2)+'</span></div><div><span class="mu" style="font-size:15px">最高</span><span class="up">'+fmt(q.h,2)+'</span></div><div><span class="mu" style="font-size:15px">最低</span><span class="dn">'+fmt(q.l,2)+'</span></div></div></div>';
+  const idx=idxOrder().map(id=>BY[id]);
+  h+='<div class="card"><div class="ch"><span>全球指數</span><span class="mu">長按拖曳可調整順序</span></div><div class="tiles n" id="tiles">'+idx.map(it=>{const q=Q[it.id]||{},c=chg(it.id),s=c?sgn(c.d):'fl';return'<div class="tile'+(s==='up'?' u':s==='dn'?' d':'')+'" data-id="'+it.id+'"><div class="tn"><span>'+esc(it.n)+'</span>'+spark(q.s,48,22,COL[s],null)+'</div><div class="tv '+s+'">'+fmt(q.p,2)+'</div><div class="tc"><span class="'+s+'">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),2):'—')+'</span>'+pill(c?c.pc:null)+'</div></div>'}).join('')+'</div></div>';
   const vx=Q['^VIX']||{},vc=chg('^VIX'),vs=vc?sgn(vc.d):'fl';
   const f=FNG,ang=f==null?-90:(-90+f*1.8),fs=f==null?'fl':f>=55?'up':f<45?'dn':'gold';
   h+='<div class="two"><div class="mini" style="text-align:center;cursor:default"><div class="t" style="text-align:left">恐懼貪婪</div><svg width="140" height="78" viewBox="0 0 130 72"><path d="M12 66 A53 53 0 0 1 38 20" stroke="#2ebd85" stroke-width="8" fill="none"/><path d="M41 18 A53 53 0 0 1 89 18" stroke="#D4AF37" stroke-width="8" fill="none"/><path d="M92 20 A53 53 0 0 1 118 66" stroke="#f6465d" stroke-width="8" fill="none"/><g transform="rotate('+ang+' 65 66)"><line x1="65" y1="66" x2="65" y2="26" stroke="#e6edf3" stroke-width="2.2" stroke-linecap="round"/></g><circle cx="65" cy="66" r="4.5" fill="#e6edf3"/></svg><div class="n '+fs+'" style="font-size:26px;font-weight:500">'+(f==null?'—':f)+'</div><div class="mu" style="font-size:14px">'+(f==null?'加密市場情緒':fngTxt(f))+'</div></div>'
@@ -374,6 +399,7 @@ let editing=false;
 function render(force){
   dirty=false;
   $('#hstat').innerHTML='<span class="live'+(wsOn?' on':'')+'"></span>'+(wsOn?'加密即時':'連線中')+(lastY?'　股匯 '+hm(lastY)+' 更新':'')+'　<span title="股市報價多為延遲">股市約延遲 15 分</span>';
+  if(drag||lp){dirty=true;return}
   if(!force){if(editing||ddOpen)return;const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.cell')){dirty=true;return}}
   const sq=$('#sbar').classList.contains('on')?$('#sinp').value:'';
   const v=$('#view');
@@ -383,7 +409,7 @@ setInterval(()=>{if(dirty&&!document.hidden)render();if(detId&&TAB!=='x')liveDet
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click',e=>{
-  const t=e.target;
+  const t=e.target;if(noClick){e.preventDefault();return}
   const nb=t.closest('[data-tab]');if(nb){TAB=nb.dataset.tab;EDIT=false;SEL.clear();$('#sbar').classList.remove('on');$('#sinp').value='';drawNav();render();window.scrollTo(0,0);yRefresh(true);return}
   const rk=t.closest('#rankseg button');if(rk){RANK=rk.dataset.r;render();return}
   const fx=t.closest('#fxseg button');if(fx){FXREV=fx.dataset.v==='1';LS.set('gm_fxrev',FXREV);render();return}
