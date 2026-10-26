@@ -30,6 +30,10 @@ async def main():
       n=await pg.evaluate("document.querySelectorAll('#tiles .tile').length");ck(f'[{W}] 指數格子 14 個',n==14,n)
       ck(f'[{W}] 指數格子有點數與迷你曲線',await pg.evaluate("[...document.querySelectorAll('#tiles .tile')].every(t=>t.querySelector('.tv').textContent.trim()!=='—'&&t.querySelector('svg'))"))
       v=await pg.evaluate(VERT);ck(f'[{W}] 總覽沒有直立文字',not v,v)
+      await pg.evaluate("Q['^TWII'].p=Q['^TWII'].pv-846.34;Q['^N225'].p=Q['^N225'].pv+1234.56;render(true)");await pg.wait_for_timeout(200)
+      cut=await pg.evaluate("[...document.querySelectorAll('#tiles .tc>span:first-child,#tiles .tv')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent)");ck(f'[{W}] 指數格子漲跌（百位以上）沒有被截斷',not cut,cut)
+      rk=await pg.evaluate("[...document.querySelectorAll('.rk')].every(r=>r.querySelector('.pv')&&r.querySelector('.pv').textContent.trim()!=='—'&&/[▲▼－]/.test(r.querySelector('.sb').textContent))");ck(f'[{W}] 今日排行有價格與漲跌點數',rk)
+      hw=await pg.evaluate("document.querySelector('#tiles .tile').getBoundingClientRect().width")
       await pg.screenshot(path=f'{OUT}/{W}-home.png',full_page=True)
       # 拖曳排序（觸控長按）
       first=await pg.evaluate("document.querySelector('#tiles .tile').dataset.id")
@@ -116,11 +120,14 @@ async def main():
       await pg.tap('#dstar');ck(f'[{W}] ☆ 可移出自選',await pg.evaluate("!curIds().includes('4938.TW')"));await pg.tap('#dstar')
       await pg.tap('#dback');await pg.wait_for_timeout(400)
       v=await pg.evaluate(VERT);ck(f'[{W}] 自選頁沒有直立文字',not v,v)
+      cut=await pg.evaluate("[...document.querySelectorAll('.tile .tc>span:first-child,.tile .tv')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent)");ck(f'[{W}] 自選卡片漲跌沒有被截斷',not cut,cut)
+      ww=await pg.evaluate("document.querySelector('.tile').getBoundingClientRect().width")
       await pg.screenshot(path=f'{OUT}/{W}-watch.png',full_page=True)
       # 搜尋
       await pg.tap('#bsearch');await pg.keyboard.type('日圓');await pg.wait_for_timeout(300);ck(f'[{W}] 搜尋',await pg.evaluate("document.querySelectorAll('#view .row').length>=1"))
       # 重新開啟資料還在
       await pg.reload();await pg.wait_for_timeout(3000);ck(f'[{W}] 重開後自選還在',await pg.evaluate("GROUPS[0].ids.includes('6488.TWO')"))
+      ck(f'[{W}] 總覽與自選卡片一樣大',abs(hw-ww)<1,(hw,ww))
       ck(f'[{W}] 沒有程式錯誤',not errs,errs[:3])
       await ctx.close()
     await b.close()
