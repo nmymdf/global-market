@@ -70,7 +70,8 @@ header>div:first-child{flex:1;min-width:0}header>div:last-child{flex:none;displa
 .tn .spk{display:block}
 .tv{font-size:20px;font-weight:500;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tc{display:flex;justify-content:space-between;align-items:center;gap:4px;margin-top:5px;font-size:14px;white-space:nowrap}
-.tc .pill{min-width:0;font-size:14px;padding:3px 7px}
+.tc .pill{min-width:0;font-size:14px;padding:3px 7px;flex:none}
+.tc>span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tile.drag{transform:scale(1.05);box-shadow:0 8px 24px rgba(0,0,0,.6);border:2px dashed var(--gold);z-index:5;position:relative}
 .tiles.sorting .tile:not(.drag){opacity:.8}
 .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
@@ -127,6 +128,9 @@ body{word-break:keep-all;overflow-wrap:normal}
 .gsel.on{border-color:var(--gold)}
 .gsel span{overflow:hidden;text-overflow:ellipsis}
 .gsel i{font-style:normal;color:var(--gold);font-size:13px;flex:none}
+.cbar{display:flex;gap:8px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:12px;background:#2a1418;border:1px solid #5a2430;flex-wrap:wrap}
+.cbar span{flex:1;min-width:160px;font-size:16px}
+.note{margin-top:8px;font-size:14px;color:var(--up)}
 .gdd{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:15;background:#101827;border:1px solid var(--gold);border-radius:12px;max-height:340px;overflow-y:auto;padding:4px}
 .gdd div{padding:12px;border-radius:8px;font-size:17px;display:flex;justify-content:space-between;white-space:nowrap;cursor:pointer}
 .gdd div.on{background:#24304a;color:var(--gold)}
@@ -235,7 +239,7 @@ body{word-break:keep-all;overflow-wrap:normal}
 
 <script>
 'use strict';
-const VER='v1.3.1';
+const VER='v1.3.2';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -267,7 +271,7 @@ const CURN={};CUR.forEach(c=>CURN[c[0]]=c[1]);
 let Q=LS.get('gm_q',{});           // id -> {p,pv,o,h,l,v,s:[],ps,pe,t,h52,l52,qv}
 let GROUPS=LS.get('gm_groups',null);
 if(!Array.isArray(GROUPS)||!GROUPS.length){GROUPS=[{n:'自選 1',ids:LS.get('gm_watch',['^TWII','2330.TW','0050.TW','TWD=X','BTCUSDT','GC=F'])},{n:'自選 2',ids:[]},{n:'自選 3',ids:[]}]}
-let gOpen=false,GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
+let CONF=null,NOTE='',gOpen=false,GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
 function saveG(){LS.set('gm_groups',GROUPS);LS.set('gm_gi',GI)}
 function curIds(){return GROUPS[GI].ids}
 let TAB='home',FXREV=LS.get('gm_fxrev',false),RANK='up',EDIT=false,SEL=new Set();
@@ -373,7 +377,7 @@ function rowHTML(it,opt){opt=opt||{};const q=Q[it.id]||{};let p=q.p,pv=q.pv,name
 function groups(list,opt){let h='',g=null;for(const it of list){if(it.g!==g){if(g!==null)h+='</div>';g=it.g;h+='<div class="gh"><span>'+esc(g)+'</span>'+(it.src==='b'?'<span class="mu">比 24 小時前</span>':'<span class="mu">比前一交易日收盤</span>')+'</div><div class="card" style="margin-top:4px;padding:2px 14px">'}h+=rowHTML(it,opt)}return h+(g!==null?'</div>':'')}
 
 /* ---------- 台股即時（證交所／櫃買） ---------- */
-let lastTW=0,twBusy=false,twWarm=false;
+let lastTW=0,twBusy=false,twWarm=false;const twBad={};
 function twKey(id){if(id==='^TWII')return'tse_t00.tw';const m=/^([0-9A-Z]+)\.(TW|TWO)$/.exec(id);return m?(m[2]==='TW'?'tse_':'otc_')+m[1].toLowerCase()+'.tw':null}
 async function pget(u,ok){if(window.Native)return nget(u);for(let k=0;k<PROX.length;k++){const i=(px+k)%PROX.length;try{const r=await fetch(PROX[i](u),{cache:'no-store'});if(r.ok){const j=await r.json();if(ok(j))return j}}catch(e){}}throw new Error('proxy')}
 async function twFetch(keys){const u='https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch='+encodeURIComponent(keys.join('|'))+'&json=1&delay=0&_='+Date.now();
@@ -390,7 +394,9 @@ function twIds(){const set=new Set(['^TWII']);ITEMS.forEach(i=>{if(twKey(i.id))s
 function twOpen(){const t=new Date(Date.now()+8*3600e3),d=t.getUTCDay(),m=t.getUTCHours()*60+t.getUTCMinutes();return d>0&&d<6&&m>=535&&m<=820}
 async function twTick(){if(twBusy||document.hidden)return;twBusy=true;
   try{const ids=twIds(),map={};ids.forEach(id=>map[twKey(id)]=id);const keys=Object.keys(map);
-    for(let i=0;i<keys.length;i+=40){const j=await twFetch(keys.slice(i,i+40));for(const m of j.msgArray){const k=(m.ex+'_'+m.c+'.tw').toLowerCase();if(map[k])twApply(m,map[k])}}
+    const eat=j=>{let n=0;for(const m of (j.msgArray||[])){const k=(m.ex+'_'+m.c+'.tw').toLowerCase();if(map[k]){twApply(m,map[k]);n++}}return n};
+    for(let i=0;i<keys.length;i+=40){const part=keys.slice(i,i+40);let n=0;try{n=eat(await twFetch(part))}catch(e){}
+      if(n<part.length&&part.length>1){for(const k of part){const q=Q[map[k]];if(q&&q.twAt&&Date.now()-q.twAt<8000)continue;if(twBad[k]&&Date.now()-twBad[k]<600000)continue;let got=0;try{got=eat(await twFetch([k]))}catch(e){}if(!got)twBad[k]=Date.now();else delete twBad[k]}}}
     lastTW=Date.now();dirty=true}catch(e){}
   twBusy=false}
 let twNext=0;setInterval(()=>{const now=Date.now();if(now>=twNext){twNext=now+(twOpen()?5000:60000);twTick()}},1000);
@@ -442,24 +448,47 @@ function rTWD(code,prev){if(code==='TWD')return 1;if(code==='BTC'||code==='ETH')
   const id=code==='USD'?'TWD=X':code+'TWD=X';const q=Q[id];if(!q)return null;return prev?q.pv:q.p}
 function conv(a,f,t,prev){const x=rTWD(f,prev),y=rTWD(t,prev);return x&&y?a*x/y:null}
 function cdec(code,v){if(code==='BTC'||code==='ETH')return 8;if(code==='KRW'||code==='JPY')return v>=100?0:2;return v!=null&&Math.abs(v)<1?4:2}
+function fxRes(){const a=CONV.a,f=CONV.f,t=CONV.t,r=conv(a,f,t),r1=conv(1,f,t),r1p=conv(1,f,t,true),rr=conv(1,t,f),pc=pct(r1,r1p),s=sgn(pc||0);return '<div class="res"><div class="mu" style="font-size:15px">'+fmt(a,a%1?2:0)+' '+CURN[f]+' =</div><div class="v n">'+fmt(r,cdec(t,r))+' <span style="font-size:14px">'+CURN[t]+'</span></div>'
+   +'<div class="n ln">1 '+f+' = '+fmt(r1,cdec(t,r1)<4?4:cdec(t,r1))+' '+t+'　<span class="'+s+'">'+(pc==null?'':arrow(pc)+' '+(pc>0?'+':'')+fmt(pc,2)+'%')+'</span></div><div class="n ln">1 '+t+' = '+fmt(rr,cdec(f,rr)<4?4:cdec(f,rr))+' '+f+'</div></div>'}
+function fxTab(){const a=CONV.a,f=CONV.f;return '<div class="lbl" style="margin-top:14px">對照表：'+fmt(a,a%1?2:0)+' '+CURN[f]+' 換成各幣別</div><div class="xt">'
+   +CUR.filter(c=>c[0]!==f).map(([k,n])=>{const v=conv(a,f,k),p1=conv(1,f,k),p0=conv(1,f,k,true),pc2=pct(p1,p0),s2=sgn(pc2||0);return'<div class="row"><span class="rn"><div class="nm">'+n+'</div><div class="sb">'+k+'</div></span><span class="rp n"><div class="pv">'+fmt(v,cdec(k,v))+'</div><div class="cd '+s2+'">'+(pc2==null?'':arrow(pc2)+' '+(pc2>0?'+':'')+fmt(pc2,2)+'%')+'</div></span></div>'}).join('')+'</div>'}
 function vFx(){
-  const a=CONV.a,f=CONV.f,t=CONV.t,r=conv(a,f,t),r1=conv(1,f,t),r1p=conv(1,f,t,true),rr=conv(1,t,f),pc=pct(r1,r1p),s=sgn(pc||0);
+  const a=CONV.a,f=CONV.f,t=CONV.t;
   let h='<div class="card"><div class="ch"><span>匯率換算</span><span class="mu">即時報價計算</span></div>'
-   +'<div class="lbl">金額</div><div class="cell amt n" tabindex="0" data-cell="0" data-k="a">'+fmt(a,a%1?2:0)+'</div>'
+   +'<div class="lbl">金額（點一下輸入）</div><div class="cell amt n" data-cell="0" data-k="a" id="amtcell"><input id="amt" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" value="'+fmt(a,a%1?2:0)+'"></div>'
    +'<div class="cv"><div><div class="lbl">從</div>'+selCell(1,'f',f)+'</div><button class="swap" id="swap" aria-label="對調"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button><div><div class="lbl">換成</div>'+selCell(2,'t',t)+'</div></div>'
-   +'<div class="res"><div class="mu" style="font-size:15px">'+fmt(a,a%1?2:0)+' '+CURN[f]+' =</div><div class="v n">'+fmt(r,cdec(t,r))+' <span style="font-size:14px">'+CURN[t]+'</span></div>'
-   +'<div class="n ln">1 '+f+' = '+fmt(r1,cdec(t,r1)<4?4:cdec(t,r1))+' '+t+'　<span class="'+s+'">'+(pc==null?'':arrow(pc)+' '+(pc>0?'+':'')+fmt(pc,2)+'%')+'</span></div><div class="n ln">1 '+t+' = '+fmt(rr,cdec(f,rr)<4?4:cdec(f,rr))+' '+f+'</div></div>'
-   +'<div class="lbl" style="margin-top:14px">對照表：'+fmt(a,a%1?2:0)+' '+CURN[f]+' 換成各幣別</div><div class="xt">'
-   +CUR.filter(c=>c[0]!==f).map(([k,n])=>{const v=conv(a,f,k),p1=conv(1,f,k),p0=conv(1,f,k,true),pc2=pct(p1,p0),s2=sgn(pc2||0);return'<div class="row"><span class="rn"><div class="nm">'+n+'</div><div class="sb">'+k+'</div></span><span class="rp n"><div class="pv">'+fmt(v,cdec(k,v))+'</div><div class="cd '+s2+'">'+(pc2==null?'':arrow(pc2)+' '+(pc2>0?'+':'')+fmt(pc2,2)+'%')+'</div></span></div>'}).join('')+'</div></div>';
-  h+='<div class="gh" style="padding-top:16px"><span>即時匯率</span><span class="seg" id="fxseg"><button data-v="0" class="'+(!FXREV?'on':'')+'">外幣→台幣</button><button data-v="1" class="'+(FXREV?'on':'')+'">台幣→外幣</button></span></div>';
+   +'<div id="fxres">'+fxRes()+'</div><div id="fxtab">'+fxTab()+'</div></div>';
+h+='<div class="gh" style="padding-top:16px"><span>即時匯率</span><span class="seg" id="fxseg"><button data-v="0" class="'+(!FXREV?'on':'')+'">外幣→台幣</button><button data-v="1" class="'+(FXREV?'on':'')+'">台幣→外幣</button></span></div>';
   h+=groups(ITEMS.filter(i=>i.c==='fx'),{rev:FXREV});
   return h;
 }
 function selCell(i,k,v){return'<div class="cell" tabindex="0" data-cell="'+i+'" data-k="'+k+'"><span><b style="font-weight:500">'+v+'</b> <span class="mu" style="font-size:14px">'+CURN[v]+'</span></span><span class="arr">▼</span></div>'}
 
+/* ---------- 連線檢測 ---------- */
+let DIAG=[],diagRun=false;
+const DT=[
+ ['證交所 上市即時（台積電 2330）',async()=>{const j=await twFetch(['tse_2330.tw']);const m=j.msgArray[0];return m.n+' '+(m.z||m.b)}],
+ ['證交所 上市即時（和碩 4938）',async()=>{const j=await twFetch(['tse_4938.tw']);const m=j.msgArray[0];return m.n+' '+(m.z||m.b)}],
+ ['櫃買 上櫃即時（環球晶 6488）',async()=>{const j=await twFetch(['otc_6488.tw']);const m=j.msgArray[0];return m.n+' '+(m.z||m.b)}],
+ ['櫃買 債券 ETF（00679B）',async()=>{const j=await twFetch(['otc_00679b.tw']);const m=j.msgArray[0];return m.n+' '+(m.z||m.b)}],
+ ['證交所 加權指數',async()=>{const j=await twFetch(['tse_t00.tw']);const m=j.msgArray[0];return m.n+' '+m.z}],
+ ['證交所 多檔一起查',async()=>{const j=await twFetch(['tse_2330.tw','tse_2317.tw','otc_6488.tw']);return j.msgArray.length+' 筆'}],
+ ['Yahoo 台股（4938.TW）',async()=>{const j=await yget(yurl('4938.TW','1d','5m'));return fmt(j.chart.result[0].meta.regularMarketPrice,2)}],
+ ['Yahoo 美股（AAPL）',async()=>{const j=await yget(yurl('AAPL','1d','5m'));return fmt(j.chart.result[0].meta.regularMarketPrice,2)}],
+ ['Yahoo 匯率（美元/台幣）',async()=>{const j=await yget(yurl('TWD=X','1d','5m'));return fmt(j.chart.result[0].meta.regularMarketPrice,2)}],
+ ['幣安 報價',async()=>{const j=await bget('/api/v3/ticker/price?symbol=BTCUSDT');return'BTC '+j.price}],
+ ['幣安 即時推送',async()=>wsOn?'已連線':Promise.reject(new Error('未連線'))],
+ ['恐懼貪婪指數',async()=>{const j=await jget('https://api.alternative.me/fng/?limit=1');return j.data[0].value}]];
+async function runDiag(){if(diagRun)return;diagRun=true;DIAG=DT.map(t=>({n:t[0],st:'…'}));render(true);
+  for(let i=0;i<DT.length;i++){const t0=Date.now();try{const r=await Promise.race([DT[i][1](),new Promise((_,j)=>setTimeout(()=>j(new Error('逾時')),15000))]);DIAG[i]={n:DT[i][0],st:'ok',d:String(r),ms:Date.now()-t0}}catch(e){DIAG[i]={n:DT[i][0],st:'bad',d:String(e&&e.message||e),ms:Date.now()-t0}}render(true)}
+  diagRun=false;render(true)}
+function vDiag(){return'<div class="gh" style="padding-top:14px"><span>連線檢測</span><span><button class="tbtn" id="drun">'+(diagRun?'檢測中…':'重新檢測')+'</button> <button class="tbtn" data-tab="more">返回</button></span></div><div class="card" style="padding:4px 14px">'
+  +(DIAG.length?DIAG.map(x=>'<div class="row" style="cursor:default;min-height:56px"><span style="font-size:20px;flex:none">'+(x.st==='ok'?'✅':x.st==='bad'?'❌':'⏳')+'</span><div class="rn"><div class="nm" style="font-size:16px">'+esc(x.n)+'</div><div class="sb">'+esc(x.d||'')+(x.ms!=null?' · '+x.ms+' ms':'')+'</div></div></div>').join(''):'<div class="empty">按「重新檢測」開始</div>')
+  +'</div><div class="mu" style="margin-top:10px;line-height:1.8">'+esc(VER)+' · '+(window.Native?'Android App':'網頁版')+'<br>檢測完請截圖傳給 Claude</div>'}
+
 /* ---------- 其他頁 ---------- */
-function vList(c){return groups(ITEMS.filter(i=>i.c===c))}
-function addRow(){return'<div class="lbl" style="margin-top:16px">新增到「'+esc(GROUPS[GI].n)+'」：輸入代號後按 Enter 或「加入」</div><form class="addf" id="addform" action="javascript:void 0" autocomplete="off"><div class="cell" id="addcell"><input id="addinp" type="text" enterkeyhint="go" placeholder="2330、00679B、TLT" autocomplete="off" autocapitalize="characters" style="text-align:left"></div><button type="submit" class="addbtn" id="addbtn">加入</button></form><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股上市、上櫃、ETF、債券 ETF 直接打代號（即時）；美股打英文代號；日股加 .T、港股加 .HK。代號後空一格可自訂名稱。</div>'}
+function vList(c){return(c==='more'?'<button class="tbtn" id="godiag" style="margin-top:12px;width:100%;padding:12px">🔧 連線檢測（資料抓不到時按這裡）</button>':'')+groups(ITEMS.filter(i=>i.c===c))}
+function addRow(){return'<div class="lbl" style="margin-top:16px">新增到「'+esc(GROUPS[GI].n)+'」：輸入代號後按 Enter 或「加入」</div><form class="addf" id="addform" action="javascript:void 0" autocomplete="off"><div class="cell'+(ADDERR?' err':'')+'" id="addcell"><input id="addinp" value="'+esc(ADDVAL)+'" type="text" enterkeyhint="go" placeholder="2330、00679B、TLT" autocomplete="off" autocapitalize="characters" style="text-align:left"></div><button type="submit" class="addbtn" id="addbtn">加入</button></form><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">'+(ADDERR?'<span class="up">'+esc(ADDERR)+'</span><br>':'')+'台股上市、上櫃、ETF、債券 ETF 直接打代號（即時）；美股打英文代號；日股加 .T、港股加 .HK。代號後空一格可自訂名稱。</div>'}
 const WS=[['c','自訂'],['up','漲幅'],['dn','跌幅'],['v','成交量'],['code','代號']];
 function vWatch(){const g=GROUPS[GI];let list=g.ids.map(id=>BY[id]).filter(Boolean);
   if(WSORT!=='c'&&!EDIT){const k=it=>{const c=chg(it.id);return c?c.pc:-1e9};list=list.slice().sort(WSORT==='up'?(x,y)=>k(y)-k(x):WSORT==='dn'?(x,y)=>(chg(x.id)?k(x):1e9)-(chg(y.id)?k(y):1e9):WSORT==='v'?(x,y)=>((Q[y.id]||{}).v||0)-((Q[x.id]||{}).v||0):(x,y)=>x.id.localeCompare(y.id))}
@@ -468,9 +497,11 @@ function vWatch(){const g=GROUPS[GI];let list=g.ids.map(id=>BY[id]).filter(Boole
   if(EDIT){h+='<div class="wbar"><div class="cell" id="gncell"><input id="gname" value="'+esc(g.n)+'" autocomplete="off"></div><button class="tbtn" id="gleft" aria-label="左移">◀</button><button class="tbtn" id="gright" aria-label="右移">▶</button><button class="tbtn red" id="gdelg">刪除此組</button></div>'
      +'<div class="wbar"><button class="tbtn red" id="wdel">移除所選（'+SEL.size+'）</button><button class="tbtn" id="wall">全選</button><span style="flex:1"></span><button class="tbtn" id="wdone" style="background:var(--gold);color:#0d1117">完成</button></div>'}
   else h+='<div class="sorts">'+WS.map(([k,n])=>'<button data-ws="'+k+'" class="'+(WSORT===k?'on':'')+'">'+(k==='c'?'排序：':'')+n+'</button>').join('')+'</div>';
+  if(CONF)h+='<div class="cbar"><span>'+esc(CONF.msg)+'</span><button class="tbtn red" id="cyes" style="background:var(--pu);color:#fff">確定</button><button class="tbtn" id="cno">取消</button></div>';
+  if(NOTE)h+='<div class="note">'+esc(NOTE)+'</div>';
   if(!list.length)h+='<div class="empty" style="padding:30px 10px 10px">這一組還沒有股票<br>在下面輸入代號新增，或在走勢頁按 ☆ 加入</div>';
   else h+='<div class="tiles n'+(EDIT?' edit':'')+'" data-kind="watch" data-drag="'+(WSORT==='c'&&!EDIT?'1':'0')+'" style="margin-top:12px">'+list.map(it=>tileHTML(it,EDIT)).join('')+'</div>'+(WSORT==='c'&&!EDIT?'<div class="mu" style="text-align:center;margin-top:8px">長按卡片拖曳可調整順序</div>':'');
-  return h+(EDIT?'':addRow())}
+  return h+addRow()}
 function vSearch(qs){qs=qs.trim().toLowerCase();const r=ITEMS.filter(i=>(i.n+' '+i.id+' '+(i.code||'')+' '+(i.cur||'')).toLowerCase().includes(qs));return r.length?'<div class="card" style="padding:2px 10px">'+r.map(it=>rowHTML(it)).join('')+'</div>':'<div class="empty">找不到「'+esc(qs)+'」</div>'}
 
 /* ---------- 導覽 ---------- */
@@ -486,7 +517,7 @@ function render(force){
   if(!force){if(editing||ddOpen||gOpen)return;const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.cell')){dirty=true;return}}
   const sq=$('#sbar').classList.contains('on')?$('#sinp').value:'';
   const v=$('#view');
-  v.innerHTML=sq.trim()?vSearch(sq):TAB==='home'?vHome():TAB==='fx'?vFx():TAB==='watch'?vWatch():vList(TAB);
+  v.innerHTML=sq.trim()?vSearch(sq):TAB==='diag'?vDiag():TAB==='home'?vHome():TAB==='fx'?vFx():TAB==='watch'?vWatch():vList(TAB);
 }
 setInterval(()=>{if(dirty&&!document.hidden)render();if(detId&&TAB!=='x')liveDetail(true)},800);
 
@@ -498,17 +529,21 @@ document.addEventListener('click',e=>{
   const fx=t.closest('#fxseg button');if(fx){FXREV=fx.dataset.v==='1';LS.set('gm_fxrev',FXREV);render();return}
   if(t.closest('#swap')){CONV={a:CONV.a,f:CONV.t,t:CONV.f};LS.set('gm_conv',CONV);render();return}
   if(t.closest('#wedit')){EDIT=true;SEL.clear();render(true);return}
-  if(t.closest('#wdone')){if(!commitGName())return;EDIT=false;SEL.clear();render(true);return}
+  if(t.closest('#wdone')){if(!commitGName())return;CONF=null;EDIT=false;SEL.clear();render(true);return}
   if(t.closest('#gsel')){gOpen=!gOpen;render(true);return}
   if(gOpen&&!t.closest('.gdd')){gOpen=false;render(true);return}
-  const gt=t.closest('[data-g]');if(gt){gOpen=false;if(EDIT&&!commitGName())return;GI=+gt.dataset.g;SEL.clear();saveG();render(true);yRefresh(true);twNext=0;return}
-  if(t.closest('#gadd')){gOpen=false;GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=true;SEL.clear();render(true);setTimeout(()=>{const i=$('#gname');if(i){i.focus();i.select()}},0);return}
+  const gt=t.closest('[data-g]');if(gt){gOpen=false;CONF=null;if(EDIT&&!commitGName())return;GI=+gt.dataset.g;SEL.clear();saveG();render(true);yRefresh(true);twNext=0;return}
+  if(t.closest('#gadd')){gOpen=false;GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=false;CONF=null;SEL.clear();render(true);note('已新增「'+GROUPS[GI].n+'」，可在下方輸入代號加入；按「編輯」可改名');return}
   const ws=t.closest('[data-ws]');if(ws){WSORT=ws.dataset.ws;LS.set('gm_wsort',WSORT);render(true);return}
   if(t.closest('#gleft')||t.closest('#gright')){const dir=t.closest('#gleft')?-1:1,j=GI+dir;if(j<0||j>=GROUPS.length)return;[GROUPS[GI],GROUPS[j]]=[GROUPS[j],GROUPS[GI]];GI=j;saveG();render(true);return}
-  if(t.closest('#gdelg')){if(GROUPS.length<=1){alert('至少要保留一組');return}if(confirm('確定要刪除「'+GROUPS[GI].n+'」整組（'+GROUPS[GI].ids.length+' 檔）？')){GROUPS.splice(GI,1);GI=Math.max(0,GI-1);saveG();SEL.clear();render(true)}return}
+  if(t.closest('#godiag')){TAB='diag';drawNav();render(true);window.scrollTo(0,0);runDiag();return}
+  if(t.closest('#drun')){runDiag();return}
+  if(t.closest('#cyes')){const f=CONF&&CONF.fn;CONF=null;if(f)f();render(true);return}
+  if(t.closest('#cno')){CONF=null;render(true);return}
+  if(t.closest('#gdelg')){if(GROUPS.length<=1){note('至少要保留一組，不能刪除');return}CONF={msg:'確定要刪除「'+GROUPS[GI].n+'」整組（'+GROUPS[GI].ids.length+' 檔）？',fn:()=>{GROUPS.splice(GI,1);GI=Math.max(0,GI-1);saveG();SEL.clear();EDIT=false}};render(true);return}
   if(t.closest('#wall')){const ids=curIds();if(SEL.size===ids.length)SEL.clear();else ids.forEach(i=>SEL.add(i));render(true);return}
   if(EDIT&&TAB==='watch'&&t.closest('.tile')){const id=t.closest('.tile').dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render(true);return}
-  if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從「'+GROUPS[GI].n+'」移除這 '+SEL.size+' 檔？')){GROUPS[GI].ids=curIds().filter(id=>!SEL.has(id));saveG();SEL.clear();render(true)}return}
+  if(t.closest('#wdel')){if(!SEL.size){note('請先勾選要移除的卡片');return}CONF={msg:'確定要從「'+GROUPS[GI].n+'」移除這 '+SEL.size+' 檔？',fn:()=>{GROUPS[GI].ids=curIds().filter(id=>!SEL.has(id));saveG();SEL.clear()}};render(true);return}
   const ck=t.closest('[data-ck]');if(ck){ck.checked?SEL.add(ck.dataset.ck):SEL.delete(ck.dataset.ck);const b=$('#wdel');if(b)b.textContent='移除所選（'+SEL.size+'）';e.stopPropagation();return}
   if(EDIT&&t.closest('.row')){const r=t.closest('.row');const id=r.dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render();return}
   if(t.closest('.cell')||t.closest('.dd')||t.closest('#addform'))return;
@@ -520,10 +555,16 @@ $('#sinp').addEventListener('keydown',e=>{if(e.key==='Escape'){$('#sinp').value=
 $('#brefresh').onclick=()=>{yRefresh(true);fng()};
 
 /* ---------- 換算器：Excel 式儲存格 ---------- */
+function amtParse(v){const raw=String(v).replace(/[,\s]/g,'');const n=Number(raw);return raw!==''&&isFinite(n)&&n>=0?n:null}
+document.addEventListener('focusin',e=>{if(e.target.id==='amt'){const i=e.target;i.value=String(CONV.a);setTimeout(()=>{try{i.select()}catch(x){}},0)}});
+document.addEventListener('input',e=>{if(e.target.id!=='amt')return;const v=amtParse(e.target.value),c=$('#amtcell');if(v==null){c.classList.add('err');return}c.classList.remove('err');CONV.a=v;$('#fxres').innerHTML=fxRes();$('#fxtab').innerHTML=fxTab()});
+document.addEventListener('keydown',e=>{if(e.target.id!=='amt')return;if(e.key==='Enter'||e.keyCode===13||e.key==='Tab'){e.preventDefault();if(amtParse(e.target.value)==null){$('#amtcell').classList.add('err');return}nextCell(0)}else if(e.key==='Escape'){e.target.value=String(LS.get('gm_conv',CONV).a);e.target.dispatchEvent(new Event('input',{bubbles:true}));e.target.blur()}});
+document.addEventListener('focusout',e=>{if(e.target.id!=='amt')return;const v=amtParse(e.target.value);if(v==null){CONV.a=LS.get('gm_conv',{a:1000}).a;$('#amtcell').classList.add('err');setTimeout(()=>{if($('#amtcell'))$('#amtcell').classList.remove('err');render(true)},1500);return}CONV.a=v;LS.set('gm_conv',CONV);e.target.value=fmt(v,v%1?2:0)});
+document.addEventListener('wheel',e=>{if(e.target.id==='amt')e.preventDefault()},{passive:false});
 let ddOpen=false,ddIdx=0;
 function cellEl(i){return document.querySelector('[data-cell="'+i+'"]')}
-function nextCell(i){const n=cellEl((i+1)%3);if(n)n.focus()}
-document.addEventListener('focusin',e=>{const c=e.target.closest&&e.target.closest('.cell');document.querySelectorAll('.cell.act').forEach(x=>{if(x!==c)x.classList.remove('act')});if(c)c.classList.add('act');if(c&&c.dataset.k==='a'&&!c.querySelector('input'))editAmt(c)});
+function nextCell(i){const n=cellEl((i+1)%3);if(n){const x=n.querySelector('input');(x||n).focus()}}
+document.addEventListener('focusin',e=>{const c=e.target.closest&&e.target.closest('.cell');document.querySelectorAll('.cell.act').forEach(x=>{if(x!==c)x.classList.remove('act')});if(c)c.classList.add('act')});
 document.addEventListener('focusout',e=>{setTimeout(()=>{const a=document.activeElement;if(!a||!a.closest||!a.closest('.cell')){document.querySelectorAll('.cell.act').forEach(x=>x.classList.remove('act'));closeDD()}},0)});
 function editAmt(c){editing=true;const inp=document.createElement('input');inp.inputMode='decimal';inp.value=String(CONV.a);c.textContent='';c.appendChild(inp);inp.focus();inp.select();
   const commit=move=>{const raw=inp.value.replace(/,/g,'').trim();const v=Number(raw);if(raw===''||!isFinite(v)||v<0){c.classList.add('err');inp.focus();return false}c.classList.remove('err');CONV.a=v;LS.set('gm_conv',CONV);editing=false;render(true);if(move)nextCell(0);return true};
@@ -543,13 +584,14 @@ document.addEventListener('keydown',e=>{const c=e.target.closest&&e.target.close
   if(e.key==='ArrowDown'){e.preventDefault();openDD(c)}else if(e.key==='ArrowUp'){e.preventDefault()}else if(e.key==='Enter'){e.preventDefault();nextCell(ci)}});
 
 /* ---------- 群組名稱 ---------- */
+function note(m){NOTE=m;render(true);clearTimeout(note.t);note.t=setTimeout(()=>{NOTE='';render(true)},3000)}
 function commitGName(){const i=$('#gname');if(!i)return true;const v=i.value.trim();if(!v){$('#gncell').classList.add('err');i.focus();return false}$('#gncell').classList.remove('err');if(GROUPS[GI].n!==v){GROUPS[GI].n=v;saveG()}return true}
 document.addEventListener('keydown',e=>{if(e.target.id!=='gname')return;if(e.key==='Enter'){e.preventDefault();if(commitGName()){e.target.blur();render(true)}}else if(e.key==='Escape'){e.target.value=GROUPS[GI].n;$('#gncell').classList.remove('err');e.target.blur()}});
 document.addEventListener('input',e=>{if(e.target.id==='gname')$('#gncell').classList.remove('err')});
 document.addEventListener('focusout',e=>{if(e.target.id==='gname'){const v=e.target.value.trim();if(v&&v!==GROUPS[GI].n){GROUPS[GI].n=v;saveG();setTimeout(()=>render(true),0)}}});
 
 /* ---------- 自行新增標的 ---------- */
-let adding=false;
+let adding=false,ADDERR='',ADDVAL='';
 document.addEventListener('keydown',e=>{if(e.target.id!=='addinp')return;
   if(e.key==='Escape'){e.target.value='';$('#addcell').classList.remove('err');return}
   if(e.key==='Enter'||e.keyCode===13){e.preventDefault();doAdd()}});
@@ -560,19 +602,20 @@ async function doAdd(){const inp=$('#addinp'),cell=$('#addcell'),msg=$('#addmsg'
   const tries=/^\d{4,6}[A-Z]?$/.test(code)?[code+'.TW',code+'.TWO']:[code];
   if(/^\d/.test(code)&&/\.TWO?$/.test(code))tries.unshift(code);
   const hit=tries.find(t=>BY[t]);const ids=curIds();
-  if(hit){if(!ids.includes(hit)){ids.push(hit);saveG()}inp.value='';twNext=0;render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
+  if(hit){if(!ids.includes(hit)){ids.push(hit);saveG()}inp.value='';ADDVAL='';ADDERR='';twNext=0;render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
   adding=true;cell.classList.remove('err');msg.textContent='查詢中…';
   let ok=null,twm=null;
-  if(/^\d{4,6}[A-Z]?$/.test(code)){try{const j=await twFetch(['tse_'+code.toLowerCase()+'.tw','otc_'+code.toLowerCase()+'.tw']);twm=(j.msgArray||[]).find(m=>m&&m.n&&(m.y||m.z));if(twm)ok=code+(twm.ex==='otc'?'.TWO':'.TW')}catch(x){}}
+  if(/^\d{4,6}[A-Z]?$/.test(code)){for(const ex of ['tse','otc']){try{const j=await twFetch([ex+'_'+code.toLowerCase()+'.tw']);twm=(j.msgArray||[]).find(m=>m&&m.n&&(m.y||m.z||m.b));if(twm){ok=code+(ex==='otc'?'.TWO':'.TW');break}}catch(x){}}}
   if(!ok){for(const t of tries){try{await yQuote(t);if(Q[t]&&Q[t].p!=null){ok=t;break}}catch(x){}}}
   adding=false;
-  if(!ok){cell.classList.add('err');msg.innerHTML='<span class="up">找不到「'+esc(code)+'」，請確認代號（未儲存）</span>';return}
+  if(!ok){ADDERR='找不到「'+code+'」，請確認代號（未儲存）';ADDVAL=raw;cell.classList.add('err');render(true);return}
+  ADDERR='';ADDVAL='';
   const c={id:ok,n:name||(twm&&twm.n)||(Q[ok]&&Q[ok].nm)||ok,auto:!name};CUSTOM.push(c);LS.set('gm_custom',CUSTOM);addItem(c);
   if(twm)twApply(twm,ok);if(twm)yQuote(ok).then(()=>{dirty=true}).catch(()=>{});
   if(!ids.includes(ok)){ids.push(ok);saveG()}LS.set('gm_q',Q);twNext=0;
   inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);
 }
-document.addEventListener('input',e=>{if(e.target.id==='addinp'){$('#addcell').classList.remove('err')}});
+document.addEventListener('input',e=>{if(e.target.id==='addinp'){ADDVAL=e.target.value;if(ADDERR){ADDERR='';$('#addcell').classList.remove('err')}}});
 
 /* ---------- 走勢頁 ---------- */
 const PER=[['d','日'],['w','週'],['m','月'],['y','年'],['a','全部']];

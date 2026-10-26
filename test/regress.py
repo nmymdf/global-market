@@ -1,0 +1,129 @@
+# 全功能回歸測試：手機尺寸＋觸控，假資料
+import asyncio, sys, os
+from playwright.async_api import async_playwright
+HTML='file://'+os.path.abspath(os.path.join(os.path.dirname(__file__),'../web/index.html'))
+MOCK=os.path.join(os.path.dirname(__file__),'mock.js')
+OUT=sys.argv[1] if len(sys.argv)>1 else '/tmp/gm-test'
+os.makedirs(OUT,exist_ok=True)
+R=[]
+def ck(name,cond,info=''):
+    R.append((bool(cond),name,info)); print(('PASS ' if cond else 'FAIL ')+name+(' — '+str(info) if info and not cond else ''))
+VERT="""()=>{const bad=[];const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;
+ while(n=w.nextNode()){const t=n.textContent.trim();if(t.length<3)continue;const el=n.parentElement;if(!el||!el.offsetParent)continue;
+  const cs=getComputedStyle(el);if(cs.visibility==='hidden')continue;const r=document.createRange();r.selectNodeContents(n);const rs=[...r.getClientRects()].filter(x=>x.width>0);
+  if(rs.length>=3&&rs.length>=t.replace(/\\s/g,'').length*0.6)bad.push(t.slice(0,20))}return bad}"""
+async def main():
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/opt/pw-browsers/chromium-1243/chrome-linux64/chrome')
+    for W in (360,412):
+      ctx=await b.new_context(viewport={'width':W,'height':860},device_scale_factor=2,has_touch=True,is_mobile=True)
+      pg=await ctx.new_page();errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+      await pg.add_init_script(path=MOCK)
+      await pg.goto(HTML);await pg.wait_for_timeout(500)
+      ck(f'[{W}] 開場畫面出現',await pg.is_visible('#splash'))
+      ck(f'[{W}] 開場有作者與版本','ArchieKUO' in (await pg.inner_text('#sauth')))
+      await pg.wait_for_timeout(2600)
+      ck(f'[{W}] 2 秒後進入主畫面',await pg.evaluate("!document.querySelector('#splash')"))
+      await pg.wait_for_timeout(1500)
+      # 總覽
+      ck(f'[{W}] 大盤卡有曲線',await pg.evaluate("!!document.querySelector('.hero svg path')"))
+      n=await pg.evaluate("document.querySelectorAll('#tiles .tile').length");ck(f'[{W}] 指數格子 14 個',n==14,n)
+      ck(f'[{W}] 指數格子有點數與迷你曲線',await pg.evaluate("[...document.querySelectorAll('#tiles .tile')].every(t=>t.querySelector('.tv').textContent.trim()!=='—'&&t.querySelector('svg'))"))
+      v=await pg.evaluate(VERT);ck(f'[{W}] 總覽沒有直立文字',not v,v)
+      await pg.screenshot(path=f'{OUT}/{W}-home.png',full_page=True)
+      # 拖曳排序（觸控長按）
+      first=await pg.evaluate("document.querySelector('#tiles .tile').dataset.id")
+      await pg.evaluate("document.querySelector('#tiles').scrollIntoView({block:'start'});window.scrollBy(0,-80)");await pg.wait_for_timeout(300)
+      t5=await pg.query_selector('#tiles .tile:nth-child(5)');bb=await t5.bounding_box();t1=await pg.query_selector('#tiles .tile:nth-child(1)');tb=await t1.bounding_box()
+      cdp=await ctx.new_cdp_session(pg)
+      async def touch(typ,x,y):await cdp.send('Input.dispatchTouchEvent',{'type':typ,'touchPoints':[{'x':x,'y':y}] if typ!='touchEnd' else []})
+      await touch('touchStart',bb['x']+30,bb['y']+30);await pg.wait_for_timeout(600)
+      for k in range(1,9):await touch('touchMove',bb['x']+30+(tb['x']-bb['x'])*k/8,bb['y']+30+(tb['y']-bb['y'])*k/8);await pg.wait_for_timeout(30)
+      await touch('touchEnd',0,0);await pg.wait_for_timeout(500)
+      nf=await pg.evaluate("document.querySelector('#tiles .tile').dataset.id")
+      ck(f'[{W}] 長按拖曳可改指數順序',nf!=first,f'{first}->{nf}')
+      ck(f'[{W}] 順序有存起來',await pg.evaluate("(JSON.parse(localStorage.getItem('gm_idxorder')||'[]')[0])")==nf)
+      ck(f'[{W}] 拖曳後沒有誤開走勢頁',not await pg.evaluate("!!detId"))
+      # 走勢頁
+      await pg.tap('#tiles .tile:nth-child(2)');await pg.wait_for_timeout(1200)
+      ck(f'[{W}] 點格子開走勢頁',await pg.evaluate("!!detId"))
+      for per in 'wmyad':
+          await pg.tap(f'#dper [data-p="{per}"]');await pg.wait_for_timeout(300)
+      ck(f'[{W}] 走勢五個週期可切換',await pg.evaluate("detPer==='d'&&hist.length>0"))
+      await pg.tap('#dtype [data-t="k"]');await pg.wait_for_timeout(200);ck(f'[{W}] K 線切換',await pg.evaluate("detType==='k'"))
+      await pg.tap('#dtype [data-t="line"]')
+      v=await pg.evaluate(VERT);ck(f'[{W}] 走勢頁沒有直立文字',not v,v)
+      await pg.tap('#dback');await pg.wait_for_timeout(500);ck(f'[{W}] 返回鍵關閉走勢頁',not await pg.evaluate("!!detId"))
+      # 匯率換算
+      await pg.tap('[data-tab=fx]');await pg.wait_for_timeout(600)
+      await pg.tap('#amt');await pg.wait_for_timeout(200)
+      ck(f'[{W}] 金額欄可取得焦點（叫得出鍵盤）',await pg.evaluate("document.activeElement&&document.activeElement.id==='amt'"))
+      await pg.keyboard.press('Control+A');await pg.keyboard.type('2500');await pg.wait_for_timeout(200)
+      ck(f'[{W}] 邊打邊換算',await pg.evaluate("$('#fxres').textContent.includes('2,500')"))
+      await pg.keyboard.press('Enter');await pg.wait_for_timeout(300)
+      ck(f'[{W}] Enter 確定並跳到下一格',await pg.evaluate("document.activeElement&&document.activeElement.dataset.cell==='1'&&CONV.a===2500"))
+      await pg.tap('#amt');await pg.keyboard.press('Control+A');await pg.keyboard.type('abc');await pg.wait_for_timeout(200)
+      ck(f'[{W}] 錯誤金額標紅',await pg.evaluate("$('#amtcell').classList.contains('err')"))
+      await pg.keyboard.press('Escape');await pg.wait_for_timeout(300)
+      ck(f'[{W}] 錯誤不存',await pg.evaluate("JSON.parse(localStorage.getItem('gm_conv')).a===2500"))
+      f0=await pg.evaluate("CONV.f");await pg.tap('#swap');await pg.wait_for_timeout(300);ck(f'[{W}] ⇅ 對調幣別',await pg.evaluate("CONV.t")==f0)
+      await pg.tap('[data-cell="1"]');await pg.wait_for_timeout(150);await pg.tap('[data-cell="1"]');await pg.wait_for_timeout(300)
+      ck(f'[{W}] 再點一下打開下拉',await pg.evaluate("!!document.querySelector('.dd')"))
+      await pg.tap('.dd [data-i="2"]');await pg.wait_for_timeout(300);ck(f'[{W}] 下拉選幣別',await pg.evaluate("CONV.f==='JPY'"))
+      ck(f'[{W}] 對照表 12 種幣別',await pg.evaluate("document.querySelectorAll('#fxtab .row').length")==12)
+      await pg.tap('#fxseg [data-v="1"]');await pg.wait_for_timeout(300);ck(f'[{W}] 匯率方向切換',await pg.evaluate("FXREV===true"))
+      v=await pg.evaluate(VERT);ck(f'[{W}] 匯率頁沒有直立文字',not v,v)
+      await pg.screenshot(path=f'{OUT}/{W}-fx.png',full_page=True)
+      # 加密、更多、連線檢測
+      await pg.tap('[data-tab=cry]');await pg.wait_for_timeout(400);ck(f'[{W}] 加密 20 種',await pg.evaluate("document.querySelectorAll('#view .row').length")==20)
+      await pg.tap('[data-tab=more]');await pg.wait_for_timeout(400);await pg.tap('#godiag');await pg.wait_for_timeout(4000)
+      d=await pg.evaluate("DIAG.map(x=>x.st).join('')");ck(f'[{W}] 連線檢測全部通過（假資料）','bad' not in d and '…' not in d,d)
+      await pg.screenshot(path=f'{OUT}/{W}-diag.png',full_page=True)
+      # 自選
+      await pg.tap('[data-tab=watch]');await pg.wait_for_timeout(500)
+      async def add(code,btn=True):
+          await pg.tap('#addinp');await pg.keyboard.type(code)
+          if btn: await pg.tap('#addbtn')
+          else: await pg.keyboard.press('Enter')
+          await pg.wait_for_timeout(1200)
+      await add('4938');ck(f'[{W}] 加入 4938（按鈕）',await pg.evaluate("curIds().includes('4938.TW')&&BY['4938.TW'].n==='和碩'"))
+      await add('6488',False);ck(f'[{W}] 加入上櫃 6488（Enter）',await pg.evaluate("curIds().includes('6488.TWO')"))
+      await add('00679B');ck(f'[{W}] 加入債券 ETF 00679B',await pg.evaluate("curIds().includes('00679B.TWO')"))
+      await add('9999');ck(f'[{W}] 不存在代號標紅不存',await pg.evaluate("$('#addcell').classList.contains('err')&&!curIds().includes('9999.TW')"))
+      await pg.tap('#addinp');await pg.keyboard.press('Control+A');await pg.keyboard.press('Backspace')
+      await pg.tap('#gsel');await pg.wait_for_timeout(200);ck(f'[{W}] 群組下拉打開',await pg.evaluate("!!document.querySelector('.gdd')"))
+      await pg.tap('#gadd');await pg.wait_for_timeout(300);ck(f'[{W}] 新增一組',await pg.evaluate("GROUPS.length===4&&GI===3"))
+      ck(f'[{W}] 新組有輸入列',await pg.is_visible('#addinp'))
+      await add('2330');ck(f'[{W}] 在新組加股票',await pg.evaluate("GROUPS[3].ids.includes('2330.TW')"))
+      await pg.tap('#wedit');await pg.wait_for_timeout(200)
+      await pg.tap('#gname');await pg.keyboard.press('Control+A');await pg.keyboard.type('債券組');await pg.keyboard.press('Enter');await pg.wait_for_timeout(200)
+      ck(f'[{W}] 編輯改組名',await pg.evaluate("GROUPS[3].n==='債券組'"))
+      await pg.tap('.tile[data-id="2330.TW"]');await pg.tap('#wdel');await pg.wait_for_timeout(200)
+      ck(f'[{W}] 移除前出現確認條',await pg.is_visible('.cbar'))
+      await pg.tap('#cyes');await pg.wait_for_timeout(200);ck(f'[{W}] 確認後移除',await pg.evaluate("GROUPS[3].ids.length===0"))
+      await pg.tap('#gdelg');await pg.wait_for_timeout(200);await pg.tap('#cno');await pg.wait_for_timeout(200);ck(f'[{W}] 取消不刪組',await pg.evaluate("GROUPS.length===4"))
+      await pg.tap('#gdelg');await pg.wait_for_timeout(200);await pg.tap('#cyes');await pg.wait_for_timeout(300);ck(f'[{W}] 確認後刪組',await pg.evaluate("GROUPS.length===3"))
+      await pg.tap('#wdone') if await pg.is_visible('#wdone') else None
+      await pg.tap('#gsel');await pg.tap('.gdd [data-g="0"]');await pg.wait_for_timeout(300)
+      for k in ['up','dn','v','code','c']:
+          await pg.tap(f'[data-ws="{k}"]');await pg.wait_for_timeout(150)
+      ck(f'[{W}] 五種排序可切換',await pg.evaluate("WSORT==='c'"))
+      await pg.tap('.tile[data-id="4938.TW"]');await pg.wait_for_timeout(1500)
+      ck(f'[{W}] 台股走勢頁有五檔',await pg.evaluate("document.querySelectorAll('#dob .l').length===10"))
+      ck(f'[{W}] 台股走勢頁顯示即時',await pg.evaluate("$('#dbadge').textContent.includes('即時')"))
+      v=await pg.evaluate(VERT);ck(f'[{W}] 台股走勢頁沒有直立文字',not v,v)
+      await pg.screenshot(path=f'{OUT}/{W}-twdetail.png',full_page=True)
+      await pg.tap('#dstar');ck(f'[{W}] ☆ 可移出自選',await pg.evaluate("!curIds().includes('4938.TW')"));await pg.tap('#dstar')
+      await pg.tap('#dback');await pg.wait_for_timeout(400)
+      v=await pg.evaluate(VERT);ck(f'[{W}] 自選頁沒有直立文字',not v,v)
+      await pg.screenshot(path=f'{OUT}/{W}-watch.png',full_page=True)
+      # 搜尋
+      await pg.tap('#bsearch');await pg.keyboard.type('日圓');await pg.wait_for_timeout(300);ck(f'[{W}] 搜尋',await pg.evaluate("document.querySelectorAll('#view .row').length>=1"))
+      # 重新開啟資料還在
+      await pg.reload();await pg.wait_for_timeout(3000);ck(f'[{W}] 重開後自選還在',await pg.evaluate("GROUPS[0].ids.includes('6488.TWO')"))
+      ck(f'[{W}] 沒有程式錯誤',not errs,errs[:3])
+      await ctx.close()
+    await b.close()
+  f=[x for x in R if not x[0]];print(f'\n總計 {len(R)} 項，失敗 {len(f)} 項')
+  sys.exit(1 if f else 0)
+asyncio.run(main())

@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setTextZoom(100);
         web.setWebViewClient(new WebViewClient());
+        web.setWebChromeClient(new android.webkit.WebChromeClient());
         web.addJavascriptInterface(new Bridge(), "Native");
         setContentView(web);
         web.loadUrl("file:///android_asset/index.html");
