@@ -37,6 +37,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* app */
 #app{max-width:760px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom))}
 header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+header>div:first-child{flex:1;min-width:0}header>div:last-child{flex:none;display:flex}
 .brand{font-family:"Noto Serif TC","Songti TC",serif;color:var(--gold);font-size:27px;letter-spacing:5px;white-space:nowrap}
 #hstat{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mu);margin-right:5px;vertical-align:1px}
@@ -120,6 +121,34 @@ nav button.on{color:var(--gold)}
 .stats b{font-weight:500;color:var(--tx)}
 .star{font-size:28px;color:var(--mu);padding:4px 8px}
 .star.on{color:var(--gold)}
+body{word-break:keep-all;overflow-wrap:normal}
+.gtabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:12px;padding-bottom:2px}
+.gtabs::-webkit-scrollbar{display:none}
+.gtab{flex:none;padding:8px 15px;border-radius:18px;background:#161f2e;color:var(--tx2);font-size:15px;white-space:nowrap}
+.gtab.on{background:var(--gold);color:#0d1117;font-weight:500}
+.gtab.add{border:1px dashed var(--gold);background:none;color:var(--gold)}
+.sorts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px}
+.sorts::-webkit-scrollbar{display:none}
+.sorts button{flex:none;font-size:14px;padding:6px 11px;border-radius:9px;background:#141c2a;color:var(--tx2);white-space:nowrap;border:1px solid transparent}
+.sorts button.on{border-color:var(--gold);color:var(--gold)}
+.wbar{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.wbar .cell{flex:1;min-width:150px;min-height:44px}
+.wbar input{text-align:left !important}
+.tbtn{flex:none;font-size:14px;padding:8px 12px;border-radius:10px;background:#161f2e;color:var(--tx2);white-space:nowrap}
+.tbtn.red{background:#2a1418;color:var(--up)}
+.tile .twl{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);margin-left:5px;vertical-align:3px}
+.tile.sel{outline:2px solid var(--gold);outline-offset:-2px}
+.tile .ckm{display:none}
+.tiles.edit .tile .ckm{display:inline-flex;flex:none;width:20px;height:20px;border-radius:5px;border:1.5px solid var(--mu);align-items:center;justify-content:center;font-size:13px;color:#0d1117;margin-right:4px}
+.tiles.edit .tile.sel .ckm{background:var(--gold);border-color:var(--gold)}
+.badge{flex:none;font-size:12px;padding:3px 8px;border-radius:7px;background:#3a1720;color:var(--up);white-space:nowrap}
+.badge.dl{background:#1a2333;color:var(--mu)}
+.ob{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px;font-size:16px}
+.ob .h{display:flex;justify-content:space-between;font-size:13px;color:var(--mu);padding:0 8px 4px}
+.ob .l{display:flex;justify-content:space-between;padding:6px 8px;border-radius:7px;margin-bottom:3px;white-space:nowrap;position:relative;overflow:hidden}
+.ob .l i{position:absolute;top:0;bottom:0;opacity:.18}
+.ob .bid i{right:0;background:var(--up)}.ob .ask i{left:0;background:var(--dn)}
+.ob .l span{position:relative}
 /* converter (Excel-style cells) */
 .cv{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:8px;align-items:end;margin-top:6px}
 .cell{position:relative;background:#0a111d;border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:50px;outline:none;cursor:text;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:17px;white-space:nowrap}
@@ -194,7 +223,7 @@ nav button.on{color:var(--gold)}
 
 <script>
 'use strict';
-const VER='v1.2';
+const VER='v1.3';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -216,14 +245,18 @@ const CRY=[['BTC','比特幣','#f7931a'],['ETH','以太幣','#8c9eff'],['BNB','�
 for(const [k,n,col] of CRY)ITEMS.push({id:k+'USDT',n,code:k,col,c:'cry',g:'市值前 20（美元報價）',src:'b'});
 const BY={};ITEMS.forEach(i=>BY[i.id]=i);
 let CUSTOM=LS.get('gm_custom',[]);
-function addItem(c){if(BY[c.id])return;const it={id:c.id,n:c.n,c:'my',g:'我新增的',src:'y',d:2};ITEMS.push(it);BY[c.id]=it}
+function addItem(c){if(BY[c.id])return;const it={id:c.id,n:c.n,auto:!!c.auto,c:'my',g:'我新增的',src:'y',d:/\.TWO?$/.test(c.id)?null:2};ITEMS.push(it);BY[c.id]=it}
 CUSTOM.forEach(addItem);
 const CUR=[['TWD','新台幣'],['USD','美元'],['JPY','日圓'],['EUR','歐元'],['CNY','人民幣'],['GBP','英鎊'],['HKD','港幣'],['KRW','韓元'],['AUD','澳幣'],['SGD','新加坡幣'],['THB','泰銖'],['BTC','比特幣'],['ETH','以太幣']];
 const CURN={};CUR.forEach(c=>CURN[c[0]]=c[1]);
 
 /* ---------- 狀態 ---------- */
 let Q=LS.get('gm_q',{});           // id -> {p,pv,o,h,l,v,s:[],ps,pe,t,h52,l52,qv}
-let WATCH=LS.get('gm_watch',['^TWII','^IXIC','TWD=X','BTCUSDT','GC=F']);
+let GROUPS=LS.get('gm_groups',null);
+if(!Array.isArray(GROUPS)||!GROUPS.length){GROUPS=[{n:'自選 1',ids:LS.get('gm_watch',['^TWII','2330.TW','0050.TW','TWD=X','BTCUSDT','GC=F'])},{n:'自選 2',ids:[]},{n:'自選 3',ids:[]}]}
+let GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
+function saveG(){LS.set('gm_groups',GROUPS);LS.set('gm_gi',GI)}
+function curIds(){return GROUPS[GI].ids}
 let TAB='home',FXREV=LS.get('gm_fxrev',false),RANK='up',EDIT=false,SEL=new Set();
 let CONV=LS.get('gm_conv',{a:1000,f:'USD',t:'TWD'});
 let LAST={},wsOn=false,lastY=0,dirty=true,detId=null,detPer='d',detType='line',hist=[],hover=null;
@@ -254,6 +287,7 @@ function yurl(sym,range,iv){return YH[(yh++)%2]+'/v8/finance/chart/'+encodeURICo
 
 /* ---------- Yahoo 行情 ---------- */
 async function yQuote(id){
+  const OLDQ=Q[id];
   const j=await yget(yurl(id,'1d','5m'));const r=j.chart.result[0],m=r.meta,qq=(r.indicators.quote||[{}])[0]||{};
   let cl=(qq.close||[]).filter(x=>x!=null);let op=(qq.open||[]).find(x=>x!=null);
   if(cl.length<3){try{const j2=await yget(yurl(id,'5d','15m'));const r2=j2.chart.result[0],q2=r2.indicators.quote[0],ts=r2.timestamp||[],off=(r2.meta.gmtoffset||0);
@@ -261,6 +295,7 @@ async function yQuote(id){
       if(idx.length>2){cl=idx.map(i=>q2.close[i]);if(op==null)op=q2.open[idx[0]]}}}catch(e){}}
   const tp=m.currentTradingPeriod&&m.currentTradingPeriod.regular;
   Q[id]={p:m.regularMarketPrice,pv:m.previousClose!=null?m.previousClose:m.chartPreviousClose,o:op,h:m.regularMarketDayHigh,l:m.regularMarketDayLow,v:m.regularMarketVolume,s:cl.length>2?thin(cl,60):(Q[id]&&Q[id].s)||[],ps:tp?tp.start*1000:null,pe:tp?tp.end*1000:null,t:(m.regularMarketTime||0)*1000,h52:m.fiftyTwoWeekHigh,l52:m.fiftyTwoWeekLow,nm:m.shortName||m.longName||''};
+  const o=OLDQ;if(o&&o.twAt&&Date.now()-o.twAt<180000){for(const k of ['p','pv','o','h','l','v','t','tw','twAt'])Q[id][k]=o[k];if(Q[id].s.length)Q[id].s[Q[id].s.length-1]=o.p}
   dirty=true;
 }
 function thin(a,n){if(a.length<=n)return a;const o=[],st=(a.length-1)/(n-1);for(let i=0;i<n;i++)o.push(a[Math.round(i*st)]);return o}
@@ -324,16 +359,41 @@ function rowHTML(it,opt){opt=opt||{};const q=Q[it.id]||{};let p=q.p,pv=q.pv,name
   return'<div class="row" data-id="'+it.id+'">'+ck+ic+'<div class="rn"><div class="nm">'+esc(name)+'</div><div class="sb n">'+sub+'</div></div>'+spark(opt.rev&&q.s?q.s.map(x=>1/x):q.s,52,30,COL[s],null)+'<div class="rp n"><div class="pv'+flash(it.id+(opt.rev?'r':''),p)+'">'+fmt(p,d)+'</div><div>'+pill(pc)+'</div></div></div>'}
 function groups(list,opt){let h='',g=null;for(const it of list){if(it.g!==g){if(g!==null)h+='</div>';g=it.g;h+='<div class="gh"><span>'+esc(g)+'</span>'+(it.src==='b'?'<span class="mu">比 24 小時前</span>':'<span class="mu">比前一交易日收盤</span>')+'</div><div class="card" style="margin-top:4px;padding:2px 14px">'}h+=rowHTML(it,opt)}return h+(g!==null?'</div>':'')}
 
+/* ---------- 台股即時（證交所／櫃買） ---------- */
+let lastTW=0,twBusy=false,twWarm=false;
+function twKey(id){if(id==='^TWII')return'tse_t00.tw';const m=/^([0-9A-Z]+)\.(TW|TWO)$/.exec(id);return m?(m[2]==='TW'?'tse_':'otc_')+m[1].toLowerCase()+'.tw':null}
+async function pget(u,ok){if(window.Native)return nget(u);for(let k=0;k<PROX.length;k++){const i=(px+k)%PROX.length;try{const r=await fetch(PROX[i](u),{cache:'no-store'});if(r.ok){const j=await r.json();if(ok(j))return j}}catch(e){}}throw new Error('proxy')}
+async function twFetch(keys){const u='https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch='+encodeURIComponent(keys.join('|'))+'&json=1&delay=0&_='+Date.now();
+  try{return await pget(u,j=>j&&Array.isArray(j.msgArray))}catch(e){if(window.Native&&!twWarm){twWarm=true;try{await nget('https://mis.twse.com.tw/stock/index.jsp')}catch(x){}return pget(u,j=>j&&Array.isArray(j.msgArray))}throw e}}
+function nn(x){const v=parseFloat(x);return isFinite(v)&&v>0?v:null}
+function lv(px,vo){const P=String(px||'').split('_'),V=String(vo||'').split('_'),o=[];for(let i=0;i<5;i++){const a=nn(P[i]);if(a!=null)o.push([a,parseInt(V[i])||0])}return o}
+function twApply(m,id){const it=BY[id];if(!it)return;const q=Q[id]||(Q[id]={s:[]});const b=lv(m.b,m.g),a=lv(m.a,m.f);
+  let p=nn(m.z);if(p==null)p=b.length?b[0][0]:a.length?a[0][0]:q.p;
+  q.p=p;q.pv=nn(m.y)||q.pv;q.o=nn(m.o)||q.o;q.h=nn(m.h)||q.h;q.l=nn(m.l)||q.l;if(id!=='^TWII')q.v=parseInt(m.v)||q.v;
+  q.t=parseInt(m.tlong)||Date.now();q.tw={b,a,u:nn(m.u),w:nn(m.w),tv:parseInt(m.tv)||0,ts:m.t||''};q.twAt=Date.now();
+  if(q.s&&q.s.length&&p!=null)q.s[q.s.length-1]=p;
+  if(it.auto&&m.n&&it.n!==m.n){it.n=m.n;const c=CUSTOM.find(x=>x.id===id);if(c){c.n=m.n;LS.set('gm_custom',CUSTOM)}}}
+function twIds(){const set=new Set(['^TWII']);ITEMS.forEach(i=>{if(twKey(i.id))set.add(i.id)});GROUPS.forEach(g=>g.ids.forEach(id=>{if(twKey(id))set.add(id)}));return[...set].filter(id=>BY[id])}
+function twOpen(){const t=new Date(Date.now()+8*3600e3),d=t.getUTCDay(),m=t.getUTCHours()*60+t.getUTCMinutes();return d>0&&d<6&&m>=535&&m<=820}
+async function twTick(){if(twBusy||document.hidden)return;twBusy=true;
+  try{const ids=twIds(),map={};ids.forEach(id=>map[twKey(id)]=id);const keys=Object.keys(map);
+    for(let i=0;i<keys.length;i+=40){const j=await twFetch(keys.slice(i,i+40));for(const m of j.msgArray){const k=(m.ex+'_'+m.c+'.tw').toLowerCase();if(map[k])twApply(m,map[k])}}
+    lastTW=Date.now();dirty=true}catch(e){}
+  twBusy=false}
+let twNext=0;setInterval(()=>{const now=Date.now();if(now>=twNext){twNext=now+(twOpen()?5000:60000);twTick()}},1000);
+function twDec(p){return p==null?2:p>=1000?0:p>=50?1:2}
+function twLive(id){const q=Q[id];return!!(q&&q.twAt&&Date.now()-q.twAt<60000)}
+
 /* ---------- 指數排序 ---------- */
 function idxOrder(){const all=ITEMS.filter(i=>i.c==='idx').map(i=>i.id);let o=LS.get('gm_idxorder',[]).filter(id=>all.includes(id));all.forEach(id=>{if(!o.includes(id))o.push(id)});return o}
 let drag=null,lp=null,lpP=null,noClick=false;
-function dStart(x,y,el){clearTimeout(lp);lp=setTimeout(()=>{drag={el,x,y};el.classList.add('drag');el.parentNode.classList.add('sorting');try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}},420);lpP={x,y}}
+function dStart(x,y,el){if(el.parentNode.dataset.drag!=='1')return;clearTimeout(lp);lp=setTimeout(()=>{drag={el,x,y};el.classList.add('drag');el.parentNode.classList.add('sorting');try{navigator.vibrate&&navigator.vibrate(25)}catch(e){}},420);lpP={x,y}}
 function dMove(x,y,ev){if(!drag){if(lp&&lpP&&(Math.abs(x-lpP.x)>8||Math.abs(y-lpP.y)>8)){clearTimeout(lp);lp=null}return}
   ev.preventDefault();const t=document.elementFromPoint(x,y),tile=t&&t.closest&&t.closest('.tile');
   if(tile&&tile!==drag.el&&tile.parentNode===drag.el.parentNode){const p=tile.parentNode,ks=[...p.children],a=ks.indexOf(drag.el),b=ks.indexOf(tile);p.insertBefore(drag.el,a<b?tile.nextSibling:tile)}
   const sy=40,vh=window.innerHeight;if(y<sy)window.scrollBy(0,-12);else if(y>vh-110)window.scrollBy(0,12)}
 function dEnd(){clearTimeout(lp);lp=null;if(!drag)return;const p=drag.el.parentNode;drag.el.classList.remove('drag');p.classList.remove('sorting');
-  LS.set('gm_idxorder',[...p.children].map(e=>e.dataset.id));drag=null;noClick=true;setTimeout(()=>{noClick=false},350);dirty=true}
+  const ord=[...p.children].map(e=>e.dataset.id);if(p.dataset.kind==='watch'){GROUPS[GI].ids=ord;saveG()}else LS.set('gm_idxorder',ord);drag=null;noClick=true;setTimeout(()=>{noClick=false},350);dirty=true}
 document.addEventListener('touchstart',e=>{const el=e.target.closest&&e.target.closest('.tile');if(el&&e.touches.length===1)dStart(e.touches[0].clientX,e.touches[0].clientY,el)},{passive:true});
 document.addEventListener('touchmove',e=>{if(lp||drag)dMove(e.touches[0].clientX,e.touches[0].clientY,e)},{passive:false});
 document.addEventListener('touchend',dEnd);document.addEventListener('touchcancel',dEnd);
@@ -342,14 +402,17 @@ document.addEventListener('mousemove',e=>{if(lp||drag)dMove(e.clientX,e.clientY,
 document.addEventListener('mouseup',dEnd);
 document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.tile'))e.preventDefault()});
 
+function tileHTML(it,ed){const q=Q[it.id]||{},c=chg(it.id),s=c?sgn(c.d):'fl',d=it.d!=null?it.d:twKey(it.id)?twDec(q.p):dec(it,q.p);
+  return'<div class="tile'+(s==='up'?' u':s==='dn'?' d':'')+(ed&&SEL.has(it.id)?' sel':'')+'" data-id="'+it.id+'"><div class="tn"><span class="ckm">✓</span><span>'+esc(it.n)+(twLive(it.id)?'<i class="twl"></i>':'')+'</span>'+spark(q.s,48,22,COL[s],null)+'</div><div class="tv '+s+'"><span class="pv'+flash('t'+it.id,q.p)+'" style="font-size:inherit;padding:0">'+fmt(q.p,d)+'</span></div><div class="tc"><span class="'+s+'">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),d):'—')+'</span>'+pill(c?c.pc:null)+'</div></div>'}
+
 /* ---------- 總覽 ---------- */
 function vHome(){
   const chipIds=[['^TWII','台股'],['^N225','日股'],['^HSI','港股'],['^GDAXI','歐股'],['^GSPC','美股']];
   let h='<div class="chips">'+chipIds.map(([id,n])=>{const s=mstat(id);return'<span class="chip'+(s==='開盤中'?' open':'')+'">'+n+' '+(s||'—')+'</span>'}).join('')+'<span class="chip open">加密 24h</span></div>';
   const q=Q['^TWII']||{},c=chg('^TWII'),s=c?sgn(c.d):'fl';
   h+='<div class="card hero'+(s==='dn'?' d':'')+'" data-id="^TWII"><div class="ch"><span>台灣加權指數</span><span class="mu">'+(mstat('^TWII')||'TAIEX')+(q.t?' · '+hm(q.t):'')+'</span></div>'+areaSvg(q.s,q.pv,COL[s],true)+'<div class="hp n '+s+'"><span class="pv'+flash('h^TWII',q.p)+'" style="font-size:inherit">'+fmt(q.p,2)+'</span></div><div style="display:flex;gap:12px;align-items:center;margin-top:6px">'+pill(c?c.pc:null)+'<span class="n '+s+'" style="font-size:19px">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),2):'')+'</span></div><div class="hst n"><div><span class="mu" style="font-size:15px">開盤</span><span>'+fmt(q.o,2)+'</span></div><div><span class="mu" style="font-size:15px">前收</span><span>'+fmt(q.pv,2)+'</span></div><div><span class="mu" style="font-size:15px">最高</span><span class="up">'+fmt(q.h,2)+'</span></div><div><span class="mu" style="font-size:15px">最低</span><span class="dn">'+fmt(q.l,2)+'</span></div></div></div>';
-  const idx=idxOrder().map(id=>BY[id]);
-  h+='<div class="card"><div class="ch"><span>全球指數</span><span class="mu">長按拖曳可調整順序</span></div><div class="tiles n" id="tiles">'+idx.map(it=>{const q=Q[it.id]||{},c=chg(it.id),s=c?sgn(c.d):'fl';return'<div class="tile'+(s==='up'?' u':s==='dn'?' d':'')+'" data-id="'+it.id+'"><div class="tn"><span>'+esc(it.n)+'</span>'+spark(q.s,48,22,COL[s],null)+'</div><div class="tv '+s+'">'+fmt(q.p,2)+'</div><div class="tc"><span class="'+s+'">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),2):'—')+'</span>'+pill(c?c.pc:null)+'</div></div>'}).join('')+'</div></div>';
+  const idx=idxOrder().map(id=>BY[id]);/*tiles*/
+  h+='<div class="card"><div class="ch"><span>全球指數</span><span class="mu">長按拖曳可調整順序</span></div><div class="tiles n" id="tiles" data-drag="1" data-kind="idx">'+idx.map(it=>tileHTML(it)).join('')+'</div></div>';
   const vx=Q['^VIX']||{},vc=chg('^VIX'),vs=vc?sgn(vc.d):'fl';
   const f=FNG,ang=f==null?-90:(-90+f*1.8),fs=f==null?'fl':f>=55?'up':f<45?'dn':'gold';
   h+='<div class="two"><div class="mini" style="text-align:center;cursor:default"><div class="t" style="text-align:left">恐懼貪婪</div><svg width="140" height="78" viewBox="0 0 130 72"><path d="M12 66 A53 53 0 0 1 38 20" stroke="#2ebd85" stroke-width="8" fill="none"/><path d="M41 18 A53 53 0 0 1 89 18" stroke="#D4AF37" stroke-width="8" fill="none"/><path d="M92 20 A53 53 0 0 1 118 66" stroke="#f6465d" stroke-width="8" fill="none"/><g transform="rotate('+ang+' 65 66)"><line x1="65" y1="66" x2="65" y2="26" stroke="#e6edf3" stroke-width="2.2" stroke-linecap="round"/></g><circle cx="65" cy="66" r="4.5" fill="#e6edf3"/></svg><div class="n '+fs+'" style="font-size:26px;font-weight:500">'+(f==null?'—':f)+'</div><div class="mu" style="font-size:14px">'+(f==null?'加密市場情緒':fngTxt(f))+'</div></div>'
@@ -383,11 +446,17 @@ function selCell(i,k,v){return'<div class="cell" tabindex="0" data-cell="'+i+'" 
 
 /* ---------- 其他頁 ---------- */
 function vList(c){return groups(ITEMS.filter(i=>i.c===c))}
-function addRow(){return'<div class="lbl" style="margin-top:14px">新增股票／ETF／指數（輸入代號，可加空格與名稱）</div><div class="cell" id="addcell"><input id="addinp" placeholder="例如：2317 鴻海、00878、TSLA、9984.T" autocomplete="off" style="text-align:left"></div><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股直接打數字代號；美股打英文代號；其他市場加後綴，例如日股 .T、港股 .HK。按 Enter 加入。</div>'}
-function vWatch(){const list=WATCH.map(id=>BY[id]).filter(Boolean);
-  if(!list.length)return'<div class="empty" style="padding-bottom:10px">還沒有自選項目<br>在下面輸入代號新增，或在走勢頁按右上角 ☆ 加入</div>'+addRow();
-  let h='<div class="gh" style="padding-top:14px"><span>我的自選（'+list.length+'）</span><span>'+(EDIT?'<button class="chip" id="wdel" style="background:#2a1418;color:var(--up)">移除所選（'+SEL.size+'）</button> <button class="chip" id="wdone">完成</button>':'<button class="chip" id="wedit">編輯</button>')+'</span></div><div class="card" style="margin-top:4px;padding:2px 10px">';
-  return h+list.map(it=>rowHTML(it,{edit:EDIT})).join('')+'</div>'+(EDIT?'':addRow())}
+function addRow(){return'<div class="lbl" style="margin-top:16px">新增到「'+esc(GROUPS[GI].n)+'」：輸入代號後按 Enter</div><div class="cell" id="addcell"><input id="addinp" placeholder="2330、00679B、TLT、9984.T" autocomplete="off" style="text-align:left"></div><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股上市、上櫃、ETF、債券 ETF 直接打代號（即時）；美股打英文代號；日股加 .T、港股加 .HK。代號後空一格可自訂名稱。</div>'}
+const WS=[['c','自訂'],['up','漲幅'],['dn','跌幅'],['v','成交量'],['code','代號']];
+function vWatch(){const g=GROUPS[GI];let list=g.ids.map(id=>BY[id]).filter(Boolean);
+  if(WSORT!=='c'&&!EDIT){const k=it=>{const c=chg(it.id);return c?c.pc:-1e9};list=list.slice().sort(WSORT==='up'?(x,y)=>k(y)-k(x):WSORT==='dn'?(x,y)=>(chg(x.id)?k(x):1e9)-(chg(y.id)?k(y):1e9):WSORT==='v'?(x,y)=>((Q[y.id]||{}).v||0)-((Q[x.id]||{}).v||0):(x,y)=>x.id.localeCompare(y.id))}
+  let h='<div class="gtabs">'+GROUPS.map((x,i)=>'<button class="gtab'+(i===GI?' on':'')+'" data-g="'+i+'">'+esc(x.n)+' <span style="opacity:.6;font-size:13px">('+x.ids.length+')</span></button>').join('')+'<button class="gtab add" id="gadd">＋ 新增</button></div>';
+  if(EDIT){h+='<div class="wbar"><div class="cell" id="gncell"><input id="gname" value="'+esc(g.n)+'" autocomplete="off"></div><button class="tbtn" id="gleft" aria-label="左移">◀</button><button class="tbtn" id="gright" aria-label="右移">▶</button><button class="tbtn red" id="gdelg">刪除此組</button></div>'
+     +'<div class="wbar"><button class="tbtn red" id="wdel">移除所選（'+SEL.size+'）</button><button class="tbtn" id="wall">全選</button><span style="flex:1"></span><button class="tbtn" id="wdone" style="background:var(--gold);color:#0d1117">完成</button></div>'}
+  else h+='<div class="sorts">'+WS.map(([k,n])=>'<button data-ws="'+k+'" class="'+(WSORT===k?'on':'')+'">'+(k==='c'?'排序：':'')+n+'</button>').join('')+'<span style="flex:1"></span><button id="wedit">編輯</button></div>';
+  if(!list.length)h+='<div class="empty" style="padding:30px 10px 10px">這一組還沒有股票<br>在下面輸入代號新增，或在走勢頁按 ☆ 加入</div>';
+  else h+='<div class="tiles n'+(EDIT?' edit':'')+'" data-kind="watch" data-drag="'+(WSORT==='c'&&!EDIT?'1':'0')+'" style="margin-top:12px">'+list.map(it=>tileHTML(it,EDIT)).join('')+'</div>'+(WSORT==='c'&&!EDIT?'<div class="mu" style="text-align:center;margin-top:8px">長按卡片拖曳可調整順序</div>':'');
+  return h+(EDIT?'':addRow())}
 function vSearch(qs){qs=qs.trim().toLowerCase();const r=ITEMS.filter(i=>(i.n+' '+i.id+' '+(i.code||'')+' '+(i.cur||'')).toLowerCase().includes(qs));return r.length?'<div class="card" style="padding:2px 10px">'+r.map(it=>rowHTML(it)).join('')+'</div>':'<div class="empty">找不到「'+esc(qs)+'」</div>'}
 
 /* ---------- 導覽 ---------- */
@@ -398,7 +467,7 @@ function drawNav(){$('#nav').innerHTML=NAV.map(([k,n,p])=>'<button data-tab="'+k
 let editing=false;
 function render(force){
   dirty=false;
-  $('#hstat').innerHTML='<span class="live'+(wsOn?' on':'')+'"></span>'+(wsOn?'加密即時':'連線中')+(lastY?'　股匯 '+hm(lastY)+' 更新':'')+'　<span title="股市報價多為延遲">股市約延遲 15 分</span>';
+  $('#hstat').innerHTML='<span class="live'+(wsOn?' on':'')+'"></span>'+(wsOn?'加密即時':'連線中')+(Date.now()-lastTW<90000?'　台股即時':'')+(lastY?'　股匯 '+hm(lastY)+' 更新':'')+'　海外股市延遲約 15 分';
   if(drag||lp){dirty=true;return}
   if(!force){if(editing||ddOpen)return;const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.cell')){dirty=true;return}}
   const sq=$('#sbar').classList.contains('on')?$('#sinp').value:'';
@@ -414,9 +483,16 @@ document.addEventListener('click',e=>{
   const rk=t.closest('#rankseg button');if(rk){RANK=rk.dataset.r;render();return}
   const fx=t.closest('#fxseg button');if(fx){FXREV=fx.dataset.v==='1';LS.set('gm_fxrev',FXREV);render();return}
   if(t.closest('#swap')){CONV={a:CONV.a,f:CONV.t,t:CONV.f};LS.set('gm_conv',CONV);render();return}
-  if(t.closest('#wedit')){EDIT=true;SEL.clear();render();return}
-  if(t.closest('#wdone')){EDIT=false;SEL.clear();render();return}
-  if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從自選移除這 '+SEL.size+' 個項目？')){WATCH=WATCH.filter(id=>!SEL.has(id));LS.set('gm_watch',WATCH);CUSTOM=CUSTOM.filter(c=>!SEL.has(c.id));LS.set('gm_custom',CUSTOM);SEL.clear();EDIT=false;render()}return}
+  if(t.closest('#wedit')){EDIT=true;SEL.clear();render(true);return}
+  if(t.closest('#wdone')){if(!commitGName())return;EDIT=false;SEL.clear();render(true);return}
+  const gt=t.closest('[data-g]');if(gt){if(EDIT&&!commitGName())return;GI=+gt.dataset.g;SEL.clear();saveG();render(true);yRefresh(true);twNext=0;return}
+  if(t.closest('#gadd')){GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=true;SEL.clear();render(true);setTimeout(()=>{const i=$('#gname');if(i){i.focus();i.select()}},0);setTimeout(()=>{const tb=document.querySelector('.gtab.on');if(tb)tb.scrollIntoView({inline:'nearest',block:'nearest'})},50);return}
+  const ws=t.closest('[data-ws]');if(ws){WSORT=ws.dataset.ws;LS.set('gm_wsort',WSORT);render(true);return}
+  if(t.closest('#gleft')||t.closest('#gright')){const dir=t.closest('#gleft')?-1:1,j=GI+dir;if(j<0||j>=GROUPS.length)return;[GROUPS[GI],GROUPS[j]]=[GROUPS[j],GROUPS[GI]];GI=j;saveG();render(true);return}
+  if(t.closest('#gdelg')){if(GROUPS.length<=1){alert('至少要保留一組');return}if(confirm('確定要刪除「'+GROUPS[GI].n+'」整組（'+GROUPS[GI].ids.length+' 檔）？')){GROUPS.splice(GI,1);GI=Math.max(0,GI-1);saveG();SEL.clear();render(true)}return}
+  if(t.closest('#wall')){const ids=curIds();if(SEL.size===ids.length)SEL.clear();else ids.forEach(i=>SEL.add(i));render(true);return}
+  if(EDIT&&TAB==='watch'&&t.closest('.tile')){const id=t.closest('.tile').dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render(true);return}
+  if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從「'+GROUPS[GI].n+'」移除這 '+SEL.size+' 檔？')){GROUPS[GI].ids=curIds().filter(id=>!SEL.has(id));saveG();SEL.clear();render(true)}return}
   const ck=t.closest('[data-ck]');if(ck){ck.checked?SEL.add(ck.dataset.ck):SEL.delete(ck.dataset.ck);const b=$('#wdel');if(b)b.textContent='移除所選（'+SEL.size+'）';e.stopPropagation();return}
   if(EDIT&&t.closest('.row')){const r=t.closest('.row');const id=r.dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render();return}
   if(t.closest('.cell')||t.closest('.dd'))return;
@@ -450,6 +526,12 @@ document.addEventListener('keydown',e=>{const c=e.target.closest&&e.target.close
   if(ddOpen){const d=c.querySelector('.dd');if(!d)return;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();d.children[ddIdx].classList.remove('hi');ddIdx=(ddIdx+(e.key==='ArrowDown'?1:-1)+CUR.length)%CUR.length;d.children[ddIdx].classList.add('hi');d.children[ddIdx].scrollIntoView({block:'nearest'})}else if(e.key==='Enter'){e.preventDefault();pickDD(c,ddIdx)}else if(e.key==='Escape'){e.preventDefault();closeDD()}else if(e.key==='Tab'){closeDD()}return}
   if(e.key==='ArrowDown'){e.preventDefault();openDD(c)}else if(e.key==='ArrowUp'){e.preventDefault()}else if(e.key==='Enter'){e.preventDefault();nextCell(ci)}});
 
+/* ---------- 群組名稱 ---------- */
+function commitGName(){const i=$('#gname');if(!i)return true;const v=i.value.trim();if(!v){$('#gncell').classList.add('err');i.focus();return false}$('#gncell').classList.remove('err');if(GROUPS[GI].n!==v){GROUPS[GI].n=v;saveG()}return true}
+document.addEventListener('keydown',e=>{if(e.target.id!=='gname')return;if(e.key==='Enter'){e.preventDefault();if(commitGName()){e.target.blur();render(true)}}else if(e.key==='Escape'){e.target.value=GROUPS[GI].n;$('#gncell').classList.remove('err');e.target.blur()}});
+document.addEventListener('input',e=>{if(e.target.id==='gname')$('#gncell').classList.remove('err')});
+document.addEventListener('focusout',e=>{if(e.target.id==='gname'){const v=e.target.value.trim();if(v&&v!==GROUPS[GI].n){GROUPS[GI].n=v;saveG();setTimeout(()=>render(true),0)}}});
+
 /* ---------- 自行新增標的 ---------- */
 let adding=false;
 document.addEventListener('keydown',async e=>{if(e.target.id!=='addinp')return;const inp=e.target,cell=$('#addcell'),msg=$('#addmsg');
@@ -458,29 +540,33 @@ document.addEventListener('keydown',async e=>{if(e.target.id!=='addinp')return;c
   const raw=inp.value.trim();if(!raw)return;
   const sp=raw.split(/\s+/);let code=sp[0].toUpperCase();const name=sp.slice(1).join(' ');
   const tries=/^\d{4,6}[A-Z]?$/.test(code)?[code+'.TW',code+'.TWO']:[code];
-  const hit=tries.find(t=>BY[t]);
-  if(hit){if(!WATCH.includes(hit)){WATCH.push(hit);LS.set('gm_watch',WATCH)}inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
+  if(/^\d/.test(code)&&/\.TWO?$/.test(code))tries.unshift(code);
+  const hit=tries.find(t=>BY[t]);const ids=curIds();
+  if(hit){if(!ids.includes(hit)){ids.push(hit);saveG()}inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
   adding=true;cell.classList.remove('err');msg.textContent='查詢中…';
-  let ok=null;for(const t of tries){try{await yQuote(t);if(Q[t]&&Q[t].p!=null){ok=t;break}}catch(x){}}
+  let ok=null,twm=null;
+  if(/^\d{4,6}[A-Z]?$/.test(code)){try{const j=await twFetch(['tse_'+code.toLowerCase()+'.tw','otc_'+code.toLowerCase()+'.tw']);twm=(j.msgArray||[]).find(m=>m&&m.n&&(m.y||m.z));if(twm)ok=code+(twm.ex==='otc'?'.TWO':'.TW')}catch(x){}}
+  if(!ok){for(const t of tries){try{await yQuote(t);if(Q[t]&&Q[t].p!=null){ok=t;break}}catch(x){}}}
   adding=false;
   if(!ok){cell.classList.add('err');msg.innerHTML='<span class="up">找不到「'+esc(code)+'」，請確認代號（未儲存）</span>';return}
-  const c={id:ok,n:name||Q[ok].nm||ok};CUSTOM.push(c);LS.set('gm_custom',CUSTOM);addItem(c);
-  if(!WATCH.includes(ok)){WATCH.push(ok);LS.set('gm_watch',WATCH)}LS.set('gm_q',Q);
+  const c={id:ok,n:name||(twm&&twm.n)||(Q[ok]&&Q[ok].nm)||ok,auto:!name};CUSTOM.push(c);LS.set('gm_custom',CUSTOM);addItem(c);
+  if(twm)twApply(twm,ok);if(twm)yQuote(ok).then(()=>{dirty=true}).catch(()=>{});
+  if(!ids.includes(ok)){ids.push(ok);saveG()}LS.set('gm_q',Q);
   inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);
 });
 document.addEventListener('input',e=>{if(e.target.id==='addinp'){$('#addcell').classList.remove('err')}});
 
 /* ---------- 走勢頁 ---------- */
 const PER=[['d','日'],['w','週'],['m','月'],['y','年'],['a','全部']];
-function openDetail(id){if(!BY[id])return;detId=id;lastDp=null;detPer='d';detType=LS.get('gm_ctype','line');hist=[];hover=null;
+function openDetail(id){if(!BY[id])return;detId=id;lastDp=null;lastKey='';detPer='d';detType=LS.get('gm_ctype','line');hist=[];hover=null;
   const it=BY[id];
-  $('#dbody').innerHTML='<div class="dh"><button class="hbtn" id="dback" aria-label="返回"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button><div class="t">'+esc(it.n)+' <span class="mu">'+esc(it.code||it.id)+'</span></div><button class="star" id="dstar" aria-label="自選">☆</button></div>'
+  $('#dbody').innerHTML='<div class="dh"><button class="hbtn" id="dback" aria-label="返回"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button><div class="t">'+esc(it.n)+' <span class="mu" style="font-size:14px">'+esc(it.code||it.id.replace(/\.TWO?$/,''))+'</span></div><span id="dbadge"></span><button class="star" id="dstar" aria-label="自選">☆</button></div>'
    +'<div id="dpx"></div><div class="ctl"><div class="per" id="dper">'+PER.map(([k,n])=>'<button data-p="'+k+'">'+n+'</button>').join('')+'</div><span class="seg" id="dtype"><button data-t="line">折線</button><button data-t="k">K 線</button></span></div>'
-   +'<div id="tip" class="n"></div><div id="cvw"><canvas id="cv"></canvas></div><div id="prng" class="n mu" style="margin-top:6px;font-size:14px"></div><div class="stats n" id="dst"></div>'
-   +'<div class="mu" style="margin-top:16px;line-height:1.8;font-size:14px">'+(it.src==='b'?'資料來源：Binance（即時推送）。漲跌對比 24 小時前價格。':'資料來源：Yahoo Finance，股市報價多為延遲約 15 分鐘，匯率約每分鐘更新。漲跌對比前一交易日收盤。')+'</div><div class="author">'+AUTH+'</div>';
+   +'<div id="tip" class="n"></div><div id="cvw"><canvas id="cv"></canvas></div><div id="prng" class="n mu" style="margin-top:6px;font-size:14px"></div><div class="stats n" id="dst"></div><div id="dob"></div>'
+   +'<div class="mu" style="margin-top:16px;line-height:1.8;font-size:14px">'+(it.src==='b'?'資料來源：Binance（即時推送）。漲跌對比 24 小時前價格。':twKey(id)?'報價：臺灣證券交易所／證券櫃檯買賣中心即時資訊，盤中約 5 秒更新；走勢圖：Yahoo Finance。漲跌對比昨收。':'資料來源：Yahoo Finance，股市報價多為延遲約 15 分鐘，匯率約每分鐘更新。漲跌對比前一交易日收盤。')+'</div><div class="author">'+AUTH+'</div>';
   $('#det').classList.add('on');$('#det').scrollTop=0;history.pushState({d:1},'');
   $('#dback').onclick=()=>history.back();
-  $('#dstar').onclick=()=>{const i=WATCH.indexOf(id);i<0?WATCH.push(id):WATCH.splice(i,1);LS.set('gm_watch',WATCH);upStar();dirty=true};
+  $('#dstar').onclick=()=>{const ids=curIds(),i=ids.indexOf(id);i<0?ids.push(id):ids.splice(i,1);saveG();upStar();dirty=true};
   $('#dper').onclick=e=>{const b=e.target.closest('[data-p]');if(b){detPer=b.dataset.p;upCtl();loadHist()}};
   $('#dtype').onclick=e=>{const b=e.target.closest('[data-t]');if(b){detType=b.dataset.t;LS.set('gm_ctype',detType);upCtl();drawChart()}};
   const cv=$('#cv');
@@ -492,15 +578,21 @@ function openDetail(id){if(!BY[id])return;detId=id;lastDp=null;detPer='d';detTyp
 function closeDetail(){detId=null;$('#det').classList.remove('on');dirty=true}
 window.addEventListener('popstate',()=>{if(detId)closeDetail()});
 window.onBack=function(){if(ddOpen){closeDD();return true}if(detId){history.back();return true}if($('#sbar').classList.contains('on')){$('#bsearch').click();return true}if(TAB!=='home'){TAB='home';drawNav();render();return true}return false};
-function upStar(){const s=$('#dstar');if(!s)return;const on=WATCH.includes(detId);s.textContent=on?'★':'☆';s.className='star'+(on?' on':'')}
+function upStar(){const s=$('#dstar');if(!s)return;const on=curIds().includes(detId);s.title=on?'已在「'+GROUPS[GI].n+'」':'加入「'+GROUPS[GI].n+'」';s.textContent=on?'★':'☆';s.className='star'+(on?' on':'')}
 function upCtl(){document.querySelectorAll('#dper button').forEach(b=>b.classList.toggle('on',b.dataset.p===detPer));document.querySelectorAll('#dtype button').forEach(b=>b.classList.toggle('on',b.dataset.t===detType))}
-let lastDp=null;
-function liveDetail(quiet){if(!detId)return;const it=BY[detId],q=Q[detId]||{},c=chg(detId),s=c?sgn(c.d):'fl',d=dec(it,q.p);
-  const fl=lastDp!=null&&q.p!=null&&q.p!==lastDp?(q.p>lastDp?' fu':' fd'):'';if(quiet&&!fl&&lastDp===q.p)return;lastDp=q.p;
+let lastDp=null,lastKey='';
+function liveDetail(quiet){if(!detId)return;const it=BY[detId],q=Q[detId]||{},c=chg(detId),s=c?sgn(c.d):'fl';let d=dec(it,q.p);
+  const key=q.p+'|'+q.t+'|'+(q.tw?q.tw.ts:'');const fl=lastDp!=null&&q.p!=null&&q.p!==lastDp?(q.p>lastDp?' fu':' fd'):'';if(quiet&&key===lastKey)return;lastKey=key;lastDp=q.p;
+  const tw=twKey(detId)&&q.tw,live=twLive(detId);if(tw&&it.d==null)d=twDec(q.p);
+  $('#dbadge').innerHTML=it.src==='b'?'<span class="badge">即時</span>':live?'<span class="badge">即時 · '+esc(q.tw.ts||hm(q.t))+'</span>':'<span class="badge dl">'+(twKey(detId)?'最後更新 '+hm(q.t||Date.now()):'延遲約 15 分')+'</span>';
   $('#dpx').innerHTML='<div class="big n '+s+'"><span class="pv'+fl+'" style="font-size:inherit">'+fmt(q.p,d)+'</span></div><div style="display:flex;gap:12px;align-items:center;margin-top:6px;flex-wrap:wrap">'+pill(c?c.pc:null)+'<span class="n '+s+'" style="font-size:19px">'+(c?arrow(c.d)+' '+fmt(Math.abs(c.d),d):'')+'</span><span class="mu" style="font-size:14px">'+(mstat(detId)||'')+(q.t?' · '+hm(q.t):'')+'</span></div>';
   const S=it.src==='b'?[['24h 開盤',fmt(q.o,d)],['24h 前價',fmt(q.pv,d)],['24h 最高','<b class="up">'+fmt(q.h,d)+'</b>'],['24h 最低','<b class="dn">'+fmt(q.l,d)+'</b>'],['24h 成交量',compact(q.v)+' '+it.code],['24h 成交額',compact(q.qv)+' USDT']]
+   :tw?[['成交量',fmt(q.v,0)+' 張'],['單量',fmt(q.tw.tv,0)+' 張'],['開盤',fmt(q.o,d)],['昨收',fmt(q.pv,d)],['最高','<b class="up">'+fmt(q.h,d)+'</b>'],['最低','<b class="dn">'+fmt(q.l,d)+'</b>'],['漲停','<b class="up">'+fmt(q.tw.u,d)+'</b>'],['跌停','<b class="dn">'+fmt(q.tw.w,d)+'</b>'],['52 週高',fmt(q.h52,d)],['52 週低',fmt(q.l52,d)]].filter(x=>!(detId==='^TWII'&&/量|停/.test(x[0])))
    :[['開盤',fmt(q.o,d)],['前收',fmt(q.pv,d)],['最高','<b class="up">'+fmt(q.h,d)+'</b>'],['最低','<b class="dn">'+fmt(q.l,d)+'</b>'],['52 週高',fmt(q.h52,d)],['52 週低',fmt(q.l52,d)],['成交量',compact(q.v)]];
   $('#dst').innerHTML=S.map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('');
+  if(tw&&detId!=='^TWII'&&(q.tw.b.length||q.tw.a.length)){const mx=Math.max(1,...q.tw.b.map(x=>x[1]),...q.tw.a.map(x=>x[1]));const cl=v=>sgn(v-(q.pv||v));
+    $('#dob').innerHTML='<div style="font-size:18px;margin-top:16px">最佳五檔</div><div class="ob n"><div><div class="h"><span>買價</span><span>張數</span></div>'+q.tw.b.map(x=>'<div class="l bid"><i style="width:'+(x[1]/mx*100)+'%"></i><span class="'+cl(x[0])+'">'+fmt(x[0],d)+'</span><span>'+fmt(x[1],0)+'</span></div>').join('')+'</div><div><div class="h"><span>賣價</span><span>張數</span></div>'+q.tw.a.map(x=>'<div class="l ask"><i style="width:'+(x[1]/mx*100)+'%"></i><span class="'+cl(x[0])+'">'+fmt(x[0],d)+'</span><span>'+fmt(x[1],0)+'</span></div>').join('')+'</div></div>'}
+  else $('#dob').innerHTML='';
   if(it.src==='b'&&hist.length&&q.p){const L=hist[hist.length-1];L.c=q.p;L.h=Math.max(L.h,q.p);L.l=Math.min(L.l,q.p);drawChart()}
 }
 async function loadHist(){const id=detId,per=detPer,it=BY[id];hist=[];hover=null;drawChart('載入中…');

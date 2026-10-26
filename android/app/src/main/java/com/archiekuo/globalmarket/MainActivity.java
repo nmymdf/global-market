@@ -12,6 +12,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +25,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        CookieHandler.setDefault(new CookieManager());
         web = new WebView(this);
         web.setBackgroundColor(0xFF070B14);
         WebSettings s = web.getSettings();
@@ -45,7 +48,8 @@ public class MainActivity extends Activity {
                     c.setConnectTimeout(10000);
                     c.setReadTimeout(15000);
                     c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36");
-                    c.setRequestProperty("Accept", "application/json");
+                    c.setRequestProperty("Accept", "application/json, text/plain, */*");
+                    if (url.contains("mis.twse.com.tw")) c.setRequestProperty("Referer", "https://mis.twse.com.tw/stock/index.jsp");
                     if (c.getResponseCode() == 200) {
                         InputStream in = c.getInputStream();
                         ByteArrayOutputStream out = new ByteArrayOutputStream();
