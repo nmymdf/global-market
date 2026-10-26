@@ -122,11 +122,23 @@ nav button.on{color:var(--gold)}
 .star{font-size:28px;color:var(--mu);padding:4px 8px}
 .star.on{color:var(--gold)}
 body{word-break:keep-all;overflow-wrap:normal}
-.gtabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:12px;padding-bottom:2px}
+.gtrow{display:flex;gap:8px;align-items:center;margin-top:12px;position:relative}
+.gsel{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0a111d;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:18px;white-space:nowrap;cursor:pointer}
+.gsel.on{border-color:var(--gold)}
+.gsel span{overflow:hidden;text-overflow:ellipsis}
+.gsel i{font-style:normal;color:var(--gold);font-size:13px;flex:none}
+.gdd{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:15;background:#101827;border:1px solid var(--gold);border-radius:12px;max-height:340px;overflow-y:auto;padding:4px}
+.gdd div{padding:12px;border-radius:8px;font-size:17px;display:flex;justify-content:space-between;white-space:nowrap;cursor:pointer}
+.gdd div.on{background:#24304a;color:var(--gold)}
+.gdd div.add{color:var(--gold);border-top:1px solid var(--line);margin-top:4px;border-radius:0 0 8px 8px}
+.gtabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;padding-bottom:2px}
 .gtabs::-webkit-scrollbar{display:none}
 .gtab{flex:none;padding:8px 15px;border-radius:18px;background:#161f2e;color:var(--tx2);font-size:15px;white-space:nowrap}
 .gtab.on{background:var(--gold);color:#0d1117;font-weight:500}
-.gtab.add{border:1px dashed var(--gold);background:none;color:var(--gold)}
+.gtab.add{flex:none;border:1px dashed var(--gold);background:none;color:var(--gold);padding:8px 13px}
+.addf{display:flex;gap:8px;align-items:stretch}
+.addf .cell{flex:1}
+.addbtn{flex:none;padding:0 18px;border-radius:12px;background:var(--gold);color:#0d1117;font-size:16px;font-weight:500;white-space:nowrap}
 .sorts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px}
 .sorts::-webkit-scrollbar{display:none}
 .sorts button{flex:none;font-size:14px;padding:6px 11px;border-radius:9px;background:#141c2a;color:var(--tx2);white-space:nowrap;border:1px solid transparent}
@@ -223,7 +235,7 @@ body{word-break:keep-all;overflow-wrap:normal}
 
 <script>
 'use strict';
-const VER='v1.3';
+const VER='v1.3.1';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -243,6 +255,7 @@ const RAW=[
 const ITEMS=[];{let c,g,d;for(const r of RAW){c=r[2]||c;if(r[3]){g=r[3];d=undefined}ITEMS.push({id:r[0],n:r[1],c,g,d:r[4]!=null?r[4]:(c==='idx'?2:d),cur:r[5],src:'y'})}}
 const CRY=[['BTC','比特幣','#f7931a'],['ETH','以太幣','#8c9eff'],['BNB','幣安幣','#f3ba2f'],['SOL','Solana','#c58cff'],['XRP','瑞波幣','#9aa7b8'],['DOGE','狗狗幣','#c2a633'],['ADA','Cardano','#5b8def'],['TRX','波場','#ff4d4f'],['AVAX','Avalanche','#e84142'],['LINK','Chainlink','#4a7dff'],['TON','Toncoin','#3aa0ff'],['DOT','Polkadot','#e6007a'],['LTC','萊特幣','#a6a9aa'],['BCH','比特幣現金','#8dc351'],['SHIB','柴犬幣','#f0a33a'],['SUI','Sui','#4da2ff'],['NEAR','NEAR','#7ad3b8'],['APT','Aptos','#9ad0c2'],['UNI','Uniswap','#ff4fa3'],['PEPE','佩佩幣','#4caf50']];
 for(const [k,n,col] of CRY)ITEMS.push({id:k+'USDT',n,code:k,col,c:'cry',g:'市值前 20（美元報價）',src:'b'});
+ITEMS.forEach(i=>{if(/\.TWO?$/.test(i.id))i.d=null});
 const BY={};ITEMS.forEach(i=>BY[i.id]=i);
 let CUSTOM=LS.get('gm_custom',[]);
 function addItem(c){if(BY[c.id])return;const it={id:c.id,n:c.n,auto:!!c.auto,c:'my',g:'我新增的',src:'y',d:/\.TWO?$/.test(c.id)?null:2};ITEMS.push(it);BY[c.id]=it}
@@ -254,7 +267,7 @@ const CURN={};CUR.forEach(c=>CURN[c[0]]=c[1]);
 let Q=LS.get('gm_q',{});           // id -> {p,pv,o,h,l,v,s:[],ps,pe,t,h52,l52,qv}
 let GROUPS=LS.get('gm_groups',null);
 if(!Array.isArray(GROUPS)||!GROUPS.length){GROUPS=[{n:'自選 1',ids:LS.get('gm_watch',['^TWII','2330.TW','0050.TW','TWD=X','BTCUSDT','GC=F'])},{n:'自選 2',ids:[]},{n:'自選 3',ids:[]}]}
-let GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
+let gOpen=false,GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
 function saveG(){LS.set('gm_groups',GROUPS);LS.set('gm_gi',GI)}
 function curIds(){return GROUPS[GI].ids}
 let TAB='home',FXREV=LS.get('gm_fxrev',false),RANK='up',EDIT=false,SEL=new Set();
@@ -446,14 +459,15 @@ function selCell(i,k,v){return'<div class="cell" tabindex="0" data-cell="'+i+'" 
 
 /* ---------- 其他頁 ---------- */
 function vList(c){return groups(ITEMS.filter(i=>i.c===c))}
-function addRow(){return'<div class="lbl" style="margin-top:16px">新增到「'+esc(GROUPS[GI].n)+'」：輸入代號後按 Enter</div><div class="cell" id="addcell"><input id="addinp" placeholder="2330、00679B、TLT、9984.T" autocomplete="off" style="text-align:left"></div><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股上市、上櫃、ETF、債券 ETF 直接打代號（即時）；美股打英文代號；日股加 .T、港股加 .HK。代號後空一格可自訂名稱。</div>'}
+function addRow(){return'<div class="lbl" style="margin-top:16px">新增到「'+esc(GROUPS[GI].n)+'」：輸入代號後按 Enter 或「加入」</div><form class="addf" id="addform" action="javascript:void 0" autocomplete="off"><div class="cell" id="addcell"><input id="addinp" type="text" enterkeyhint="go" placeholder="2330、00679B、TLT" autocomplete="off" autocapitalize="characters" style="text-align:left"></div><button type="submit" class="addbtn" id="addbtn">加入</button></form><div class="mu" id="addmsg" style="margin-top:6px;line-height:1.7">台股上市、上櫃、ETF、債券 ETF 直接打代號（即時）；美股打英文代號；日股加 .T、港股加 .HK。代號後空一格可自訂名稱。</div>'}
 const WS=[['c','自訂'],['up','漲幅'],['dn','跌幅'],['v','成交量'],['code','代號']];
 function vWatch(){const g=GROUPS[GI];let list=g.ids.map(id=>BY[id]).filter(Boolean);
   if(WSORT!=='c'&&!EDIT){const k=it=>{const c=chg(it.id);return c?c.pc:-1e9};list=list.slice().sort(WSORT==='up'?(x,y)=>k(y)-k(x):WSORT==='dn'?(x,y)=>(chg(x.id)?k(x):1e9)-(chg(y.id)?k(y):1e9):WSORT==='v'?(x,y)=>((Q[y.id]||{}).v||0)-((Q[x.id]||{}).v||0):(x,y)=>x.id.localeCompare(y.id))}
-  let h='<div class="gtabs">'+GROUPS.map((x,i)=>'<button class="gtab'+(i===GI?' on':'')+'" data-g="'+i+'">'+esc(x.n)+' <span style="opacity:.6;font-size:13px">('+x.ids.length+')</span></button>').join('')+'<button class="gtab add" id="gadd">＋ 新增</button></div>';
+  let h='<div class="gtrow"><div class="gsel'+(gOpen?' on':'')+'" id="gsel"><span>'+esc(g.n)+' <span class="mu" style="font-size:14px">（'+g.ids.length+' 檔）</span></span><i>'+(gOpen?'▲':'▼')+'</i></div>'
+    +(gOpen?'<div class="gdd">'+GROUPS.map((x,i)=>'<div data-g="'+i+'" class="'+(i===GI?'on':'')+'"><span>'+esc(x.n)+'</span><span class="mu">'+x.ids.length+' 檔</span></div>').join('')+'<div class="add" id="gadd">＋ 新增一組</div></div>':'')+(EDIT?'':'<button class="tbtn" id="wedit" style="padding:13px 14px">編輯</button>')+'</div>';
   if(EDIT){h+='<div class="wbar"><div class="cell" id="gncell"><input id="gname" value="'+esc(g.n)+'" autocomplete="off"></div><button class="tbtn" id="gleft" aria-label="左移">◀</button><button class="tbtn" id="gright" aria-label="右移">▶</button><button class="tbtn red" id="gdelg">刪除此組</button></div>'
      +'<div class="wbar"><button class="tbtn red" id="wdel">移除所選（'+SEL.size+'）</button><button class="tbtn" id="wall">全選</button><span style="flex:1"></span><button class="tbtn" id="wdone" style="background:var(--gold);color:#0d1117">完成</button></div>'}
-  else h+='<div class="sorts">'+WS.map(([k,n])=>'<button data-ws="'+k+'" class="'+(WSORT===k?'on':'')+'">'+(k==='c'?'排序：':'')+n+'</button>').join('')+'<span style="flex:1"></span><button id="wedit">編輯</button></div>';
+  else h+='<div class="sorts">'+WS.map(([k,n])=>'<button data-ws="'+k+'" class="'+(WSORT===k?'on':'')+'">'+(k==='c'?'排序：':'')+n+'</button>').join('')+'</div>';
   if(!list.length)h+='<div class="empty" style="padding:30px 10px 10px">這一組還沒有股票<br>在下面輸入代號新增，或在走勢頁按 ☆ 加入</div>';
   else h+='<div class="tiles n'+(EDIT?' edit':'')+'" data-kind="watch" data-drag="'+(WSORT==='c'&&!EDIT?'1':'0')+'" style="margin-top:12px">'+list.map(it=>tileHTML(it,EDIT)).join('')+'</div>'+(WSORT==='c'&&!EDIT?'<div class="mu" style="text-align:center;margin-top:8px">長按卡片拖曳可調整順序</div>':'');
   return h+(EDIT?'':addRow())}
@@ -469,7 +483,7 @@ function render(force){
   dirty=false;
   $('#hstat').innerHTML='<span class="live'+(wsOn?' on':'')+'"></span>'+(wsOn?'加密即時':'連線中')+(Date.now()-lastTW<90000?'　台股即時':'')+(lastY?'　股匯 '+hm(lastY)+' 更新':'')+'　海外股市延遲約 15 分';
   if(drag||lp){dirty=true;return}
-  if(!force){if(editing||ddOpen)return;const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.cell')){dirty=true;return}}
+  if(!force){if(editing||ddOpen||gOpen)return;const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.cell')){dirty=true;return}}
   const sq=$('#sbar').classList.contains('on')?$('#sinp').value:'';
   const v=$('#view');
   v.innerHTML=sq.trim()?vSearch(sq):TAB==='home'?vHome():TAB==='fx'?vFx():TAB==='watch'?vWatch():vList(TAB);
@@ -479,14 +493,16 @@ setInterval(()=>{if(dirty&&!document.hidden)render();if(detId&&TAB!=='x')liveDet
 /* ---------- 事件 ---------- */
 document.addEventListener('click',e=>{
   const t=e.target;if(noClick){e.preventDefault();return}
-  const nb=t.closest('[data-tab]');if(nb){TAB=nb.dataset.tab;EDIT=false;SEL.clear();$('#sbar').classList.remove('on');$('#sinp').value='';drawNav();render();window.scrollTo(0,0);yRefresh(true);return}
+  const nb=t.closest('[data-tab]');if(nb){gOpen=false;TAB=nb.dataset.tab;EDIT=false;SEL.clear();$('#sbar').classList.remove('on');$('#sinp').value='';drawNav();render();window.scrollTo(0,0);yRefresh(true);return}
   const rk=t.closest('#rankseg button');if(rk){RANK=rk.dataset.r;render();return}
   const fx=t.closest('#fxseg button');if(fx){FXREV=fx.dataset.v==='1';LS.set('gm_fxrev',FXREV);render();return}
   if(t.closest('#swap')){CONV={a:CONV.a,f:CONV.t,t:CONV.f};LS.set('gm_conv',CONV);render();return}
   if(t.closest('#wedit')){EDIT=true;SEL.clear();render(true);return}
   if(t.closest('#wdone')){if(!commitGName())return;EDIT=false;SEL.clear();render(true);return}
-  const gt=t.closest('[data-g]');if(gt){if(EDIT&&!commitGName())return;GI=+gt.dataset.g;SEL.clear();saveG();render(true);yRefresh(true);twNext=0;return}
-  if(t.closest('#gadd')){GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=true;SEL.clear();render(true);setTimeout(()=>{const i=$('#gname');if(i){i.focus();i.select()}},0);setTimeout(()=>{const tb=document.querySelector('.gtab.on');if(tb)tb.scrollIntoView({inline:'nearest',block:'nearest'})},50);return}
+  if(t.closest('#gsel')){gOpen=!gOpen;render(true);return}
+  if(gOpen&&!t.closest('.gdd')){gOpen=false;render(true);return}
+  const gt=t.closest('[data-g]');if(gt){gOpen=false;if(EDIT&&!commitGName())return;GI=+gt.dataset.g;SEL.clear();saveG();render(true);yRefresh(true);twNext=0;return}
+  if(t.closest('#gadd')){gOpen=false;GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=true;SEL.clear();render(true);setTimeout(()=>{const i=$('#gname');if(i){i.focus();i.select()}},0);return}
   const ws=t.closest('[data-ws]');if(ws){WSORT=ws.dataset.ws;LS.set('gm_wsort',WSORT);render(true);return}
   if(t.closest('#gleft')||t.closest('#gright')){const dir=t.closest('#gleft')?-1:1,j=GI+dir;if(j<0||j>=GROUPS.length)return;[GROUPS[GI],GROUPS[j]]=[GROUPS[j],GROUPS[GI]];GI=j;saveG();render(true);return}
   if(t.closest('#gdelg')){if(GROUPS.length<=1){alert('至少要保留一組');return}if(confirm('確定要刪除「'+GROUPS[GI].n+'」整組（'+GROUPS[GI].ids.length+' 檔）？')){GROUPS.splice(GI,1);GI=Math.max(0,GI-1);saveG();SEL.clear();render(true)}return}
@@ -495,7 +511,7 @@ document.addEventListener('click',e=>{
   if(t.closest('#wdel')){if(!SEL.size)return;if(confirm('確定要從「'+GROUPS[GI].n+'」移除這 '+SEL.size+' 檔？')){GROUPS[GI].ids=curIds().filter(id=>!SEL.has(id));saveG();SEL.clear();render(true)}return}
   const ck=t.closest('[data-ck]');if(ck){ck.checked?SEL.add(ck.dataset.ck):SEL.delete(ck.dataset.ck);const b=$('#wdel');if(b)b.textContent='移除所選（'+SEL.size+'）';e.stopPropagation();return}
   if(EDIT&&t.closest('.row')){const r=t.closest('.row');const id=r.dataset.id;SEL.has(id)?SEL.delete(id):SEL.add(id);render();return}
-  if(t.closest('.cell')||t.closest('.dd'))return;
+  if(t.closest('.cell')||t.closest('.dd')||t.closest('#addform'))return;
   const r=t.closest('[data-id]');if(r&&!t.closest('#det')){openDetail(r.dataset.id);return}
 });
 $('#bsearch').onclick=()=>{const b=$('#sbar');b.classList.toggle('on');if(b.classList.contains('on'))$('#sinp').focus();else{$('#sinp').value='';render()}};
@@ -534,15 +550,17 @@ document.addEventListener('focusout',e=>{if(e.target.id==='gname'){const v=e.tar
 
 /* ---------- 自行新增標的 ---------- */
 let adding=false;
-document.addEventListener('keydown',async e=>{if(e.target.id!=='addinp')return;const inp=e.target,cell=$('#addcell'),msg=$('#addmsg');
-  if(e.key==='Escape'){inp.value='';cell.classList.remove('err');return}
-  if(e.key!=='Enter'||adding)return;e.preventDefault();
-  const raw=inp.value.trim();if(!raw)return;
+document.addEventListener('keydown',e=>{if(e.target.id!=='addinp')return;
+  if(e.key==='Escape'){e.target.value='';$('#addcell').classList.remove('err');return}
+  if(e.key==='Enter'||e.keyCode===13){e.preventDefault();doAdd()}});
+document.addEventListener('submit',e=>{if(e.target.id==='addform'){e.preventDefault();doAdd()}});
+async function doAdd(){const inp=$('#addinp'),cell=$('#addcell'),msg=$('#addmsg');if(!inp||adding)return;
+  const raw=inp.value.trim();if(!raw){inp.focus();return}
   const sp=raw.split(/\s+/);let code=sp[0].toUpperCase();const name=sp.slice(1).join(' ');
   const tries=/^\d{4,6}[A-Z]?$/.test(code)?[code+'.TW',code+'.TWO']:[code];
   if(/^\d/.test(code)&&/\.TWO?$/.test(code))tries.unshift(code);
   const hit=tries.find(t=>BY[t]);const ids=curIds();
-  if(hit){if(!ids.includes(hit)){ids.push(hit);saveG()}inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
+  if(hit){if(!ids.includes(hit)){ids.push(hit);saveG()}inp.value='';twNext=0;render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);return}
   adding=true;cell.classList.remove('err');msg.textContent='查詢中…';
   let ok=null,twm=null;
   if(/^\d{4,6}[A-Z]?$/.test(code)){try{const j=await twFetch(['tse_'+code.toLowerCase()+'.tw','otc_'+code.toLowerCase()+'.tw']);twm=(j.msgArray||[]).find(m=>m&&m.n&&(m.y||m.z));if(twm)ok=code+(twm.ex==='otc'?'.TWO':'.TW')}catch(x){}}
@@ -551,9 +569,9 @@ document.addEventListener('keydown',async e=>{if(e.target.id!=='addinp')return;c
   if(!ok){cell.classList.add('err');msg.innerHTML='<span class="up">找不到「'+esc(code)+'」，請確認代號（未儲存）</span>';return}
   const c={id:ok,n:name||(twm&&twm.n)||(Q[ok]&&Q[ok].nm)||ok,auto:!name};CUSTOM.push(c);LS.set('gm_custom',CUSTOM);addItem(c);
   if(twm)twApply(twm,ok);if(twm)yQuote(ok).then(()=>{dirty=true}).catch(()=>{});
-  if(!ids.includes(ok)){ids.push(ok);saveG()}LS.set('gm_q',Q);
+  if(!ids.includes(ok)){ids.push(ok);saveG()}LS.set('gm_q',Q);twNext=0;
   inp.value='';render(true);setTimeout(()=>{const i=$('#addinp');if(i)i.focus()},0);
-});
+}
 document.addEventListener('input',e=>{if(e.target.id==='addinp'){$('#addcell').classList.remove('err')}});
 
 /* ---------- 走勢頁 ---------- */
@@ -577,7 +595,7 @@ function openDetail(id){if(!BY[id])return;detId=id;lastDp=null;lastKey='';detPer
 }
 function closeDetail(){detId=null;$('#det').classList.remove('on');dirty=true}
 window.addEventListener('popstate',()=>{if(detId)closeDetail()});
-window.onBack=function(){if(ddOpen){closeDD();return true}if(detId){history.back();return true}if($('#sbar').classList.contains('on')){$('#bsearch').click();return true}if(TAB!=='home'){TAB='home';drawNav();render();return true}return false};
+window.onBack=function(){if(gOpen){gOpen=false;render(true);return true}if(ddOpen){closeDD();return true}if(detId){history.back();return true}if($('#sbar').classList.contains('on')){$('#bsearch').click();return true}if(TAB!=='home'){TAB='home';drawNav();render();return true}return false};
 function upStar(){const s=$('#dstar');if(!s)return;const on=curIds().includes(detId);s.title=on?'已在「'+GROUPS[GI].n+'」':'加入「'+GROUPS[GI].n+'」';s.textContent=on?'★':'☆';s.className='star'+(on?' on':'')}
 function upCtl(){document.querySelectorAll('#dper button').forEach(b=>b.classList.toggle('on',b.dataset.p===detPer));document.querySelectorAll('#dtype button').forEach(b=>b.classList.toggle('on',b.dataset.t===detType))}
 let lastDp=null,lastKey='';
