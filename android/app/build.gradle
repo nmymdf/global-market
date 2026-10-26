@@ -1,0 +1,25 @@
+plugins { id 'com.android.application' }
+def ver = rootProject.file('../VERSION').text.trim()
+android {
+    namespace 'com.archiekuo.globalmarket'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.archiekuo.globalmarket'
+        minSdk 26
+        targetSdk 34
+        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+        versionName ver
+    }
+    signingConfigs {
+        release {
+            storeFile rootProject.file('keystore.jks')
+            storePassword 'globalmarket'
+            keyAlias 'gm'
+            keyPassword 'globalmarket'
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.release }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
