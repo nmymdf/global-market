@@ -15,7 +15,7 @@ VERT="""()=>{const bad=[];const w=document.createTreeWalker(document.body,NodeFi
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/opt/pw-browsers/chromium-1243/chrome-linux64/chrome')
-    for W in (360,412):
+    for W in (355,412):
       ctx=await b.new_context(viewport={'width':W,'height':860},device_scale_factor=2,has_touch=True,is_mobile=True)
       pg=await ctx.new_page();errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
       await pg.add_init_script(path=MOCK)
@@ -37,6 +37,12 @@ async def main():
       await pg.screenshot(path=f'{OUT}/{W}-home.png',full_page=True)
       ck(f'[{W}] 標題右側有作者與版本',await pg.evaluate("$('#hauth').textContent.includes('ArchieKUO')&&$('#hauth').textContent.includes(VER)"))
       ck(f'[{W}] 標題列沒有擠出畫面',await pg.evaluate("[...document.querySelectorAll('header *')].every(e=>e.getBoundingClientRect().right<=innerWidth+1)"))
+      al=await pg.evaluate('''()=>{const o=[];document.querySelectorAll('.mini.sent').forEach(c=>{const r=c.getBoundingClientRect(),cx=r.left+r.width/2;const g=c.querySelector('svg').getBoundingClientRect();
+        if(g.left<r.left||g.right>r.right)o.push('儀表超出卡片');if(Math.abs(g.left+g.width/2-cx)>1.5)o.push('儀表沒置中 '+(g.left+g.width/2-cx).toFixed(1));
+        c.querySelectorAll(':scope>div:not(.t)').forEach(d=>{const rr=d.getBoundingClientRect();if(Math.abs(rr.left+rr.width/2-cx)>1.5)o.push('文字沒置中 '+d.textContent)});
+        const t=[...c.querySelectorAll('.t span')].map(x=>{const b=x.getBoundingClientRect();return b.top+b.height/2});if(Math.abs(t[0]-t[1])>1.5)o.push('標題高低不齊 '+(t[0]-t[1]).toFixed(1))});
+        const a=[...document.querySelectorAll('.mini.sent')].map(c=>c.getBoundingClientRect());if(Math.abs(a[0].height-a[1].height)>1||Math.abs(a[0].top-a[1].top)>1)o.push('兩張卡片不等高');return o}''')
+      ck(f'[{W}] 情緒卡片置中、對齊、等高',not al,al)
       ck(f'[{W}] VIX 卡片有儀表',await pg.evaluate("!!document.querySelector('[data-exp=vix] svg g')"))
       await pg.tap('[data-exp=vix]');await pg.wait_for_timeout(200);ck(f'[{W}] 點 VIX 展開說明',await pg.evaluate("$('.exp')&&$('.exp').textContent.includes('VIX')"))
       await pg.tap('[data-exp=fng]');await pg.wait_for_timeout(200);ck(f'[{W}] 點恐懼貪婪切換說明',await pg.evaluate("$('.exp').textContent.includes('恐懼貪婪')"))
