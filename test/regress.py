@@ -43,7 +43,10 @@ async def main():
       v=await pg.evaluate(VERT);ck(f'[{W}] 說明沒有直立文字',not v,v)
       cut=await pg.evaluate("[...document.querySelectorAll('.sc span')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent)");ck(f'[{W}] 說明區間沒有被截斷',not cut,cut)
       await pg.screenshot(path=f'{OUT}/{W}-sent.png',full_page=True)
-      await pg.tap('[data-exp=fng]');await pg.wait_for_timeout(200);ck(f'[{W}] 再點收起',await pg.evaluate("!$('.exp')"))
+      await pg.tap('[data-exp=fng]');await pg.wait_for_timeout(200);ck(f'[{W}] 再點卡片收起',await pg.evaluate("!$('.exp')"))
+      await pg.tap('[data-exp=vix]');await pg.wait_for_timeout(200);await pg.tap('.exp .eh .tbtn');await pg.wait_for_timeout(200);ck(f'[{W}] 按「收起」收起',await pg.evaluate("!$('.exp')"))
+      await pg.tap('[data-exp=vix]');await pg.wait_for_timeout(200);await pg.tap('.exp div:nth-child(2)');await pg.wait_for_timeout(200);ck(f'[{W}] 點說明內容也收起',await pg.evaluate("!$('.exp')"))
+      await pg.tap('[data-exp=vix]');await pg.wait_for_timeout(200);await pg.tap('.exp [data-id]');await pg.wait_for_timeout(800);ck(f'[{W}] 說明內「看走勢」可進走勢頁',await pg.evaluate("detId==='^VIX'"));await pg.tap('#dback');await pg.wait_for_timeout(400)
       # 拖曳排序（觸控長按）
       first=await pg.evaluate("document.querySelector('#tiles .tile').dataset.id")
       await pg.evaluate("document.querySelector('#tiles').scrollIntoView({block:'start'});window.scrollBy(0,-80)");await pg.wait_for_timeout(300)
