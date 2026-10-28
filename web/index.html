@@ -38,7 +38,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 #app{max-width:760px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom))}
 header{display:flex;justify-content:space-between;align-items:center;gap:10px}
 header>div:first-child{flex:1;min-width:0}header>div:last-child{flex:none;display:flex}
-.brand{font-family:"Noto Serif TC","Songti TC",serif;color:var(--gold);font-size:27px;letter-spacing:5px;white-space:nowrap}
+.brand{font-family:"Noto Serif TC","Songti TC",serif;color:var(--gold);font-size:27px;letter-spacing:4px;white-space:nowrap}
+@media (max-width:379px){.brand{font-size:24px;letter-spacing:2px}}
 #hstat{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mu);margin-right:5px;vertical-align:1px}
 .live.on{background:var(--dn);animation:pl 1.4s infinite}
@@ -62,6 +63,17 @@ header>div:first-child{flex:1;min-width:0}header>div:last-child{flex:none;displa
 .hp{font-size:44px;font-weight:500;line-height:1.15;margin-top:6px;white-space:nowrap}
 .hst{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin-top:12px;font-size:16px}
 .hst div{display:flex;justify-content:space-between;gap:6px;white-space:nowrap}
+.mini.sent{text-align:center}
+.mini.sent .t{display:flex;justify-content:space-between;text-align:left}
+.mini.on{border:1.5px solid var(--gold)}
+.exp{background:var(--card);border:1.5px solid var(--gold);border-radius:16px;padding:14px;margin-top:8px;font-size:15px;line-height:1.7}
+.exp .eh{display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap}
+.sc{display:flex;gap:4px;margin:10px 0}
+.sc span{flex:1;min-width:0;text-align:center;font-size:12px;line-height:1.5;padding:5px 0;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc b{display:block;font-weight:500;font-size:13px}
+.sc .g{background:#0d2219;color:var(--dn)}.sc .g2{background:#0f1c18;color:#7fd8b4}.sc .y{background:#2a2410;color:var(--gold)}.sc .r2{background:#24161a;color:#ff8b98}.sc .r{background:#2a121a;color:var(--up)}
+.hauth{flex:none;text-align:right;color:var(--gold);font-style:italic;font-size:12px;line-height:1.35;white-space:nowrap;margin-left:6px;align-self:flex-end;padding-bottom:3px}
+.brow{display:flex;align-items:flex-end;min-width:0}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
 .tile{border-radius:12px;padding:10px 9px;border:1px solid #223047;background:#111a29;min-width:0;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;transition:transform .15s,box-shadow .15s}
 .tile.u{background:#2a121a;border-color:#4a1d29}.tile.d{background:#0d2219;border-color:#17402f}
@@ -225,7 +237,7 @@ body{word-break:keep-all;overflow-wrap:normal}
 
 <div id="app">
   <header>
-    <div><div class="brand">全球行情</div><div class="mu" id="hstat"><span class="live" id="dot"></span>連線中…</div></div>
+    <div><div class="brow"><div class="brand">全球行情</div><div class="hauth" id="hauth"></div></div><div class="mu" id="hstat"><span class="live" id="dot"></span>連線中…</div></div>
     <div><button class="hbtn" id="bsearch" aria-label="搜尋"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><button class="hbtn" id="brefresh" aria-label="重新整理"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
   </header>
   <div id="sbar"><input class="inp" id="sinp" placeholder="輸入名稱或代號，例如 台積電、BTC、日圓" autocomplete="off"></div>
@@ -239,7 +251,7 @@ body{word-break:keep-all;overflow-wrap:normal}
 
 <script>
 'use strict';
-const VER='v1.3.3';
+const VER='v1.4';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -424,6 +436,14 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closes
 function tileHTML(it,ed){const q=Q[it.id]||{},c=chg(it.id),s=c?sgn(c.d):'fl',d=it.d!=null?it.d:twKey(it.id)?twDec(q.p):dec(it,q.p);
   return'<div class="tile'+(s==='up'?' u':s==='dn'?' d':'')+(ed&&SEL.has(it.id)?' sel':'')+'" data-id="'+it.id+'"><div class="tn"><span class="ckm">✓</span><span>'+esc(it.n)+(twLive(it.id)?'<i class="twl"></i>':'')+'</span>'+spark(q.s,44,22,COL[s],null)+'</div><div class="tv '+s+'"><span class="pv'+flash('t'+it.id,q.p)+'" style="font-size:inherit;padding:0">'+fmt(q.p,d)+'</span></div><div class="tc"><span class="'+s+'">'+(c?arrow(c.d)+fmt(Math.abs(c.d),d):'—')+'</span>'+pill(c?c.pc:null)+'</div></div>'}
 
+/* ---------- 情緒指標 ---------- */
+let EXP=null;
+function gauge(ang){return'<svg width="140" height="78" viewBox="0 0 130 72"><path d="M12 66 A53 53 0 0 1 38 20" stroke="#1fcf8f" stroke-width="8" fill="none"/><path d="M41 18 A53 53 0 0 1 89 18" stroke="#D4AF37" stroke-width="8" fill="none"/><path d="M92 20 A53 53 0 0 1 118 66" stroke="#ff4d63" stroke-width="8" fill="none"/><g transform="rotate('+ang+' 65 66)"><line x1="65" y1="66" x2="65" y2="26" stroke="#eef2f6" stroke-width="2.2" stroke-linecap="round"/></g><circle cx="65" cy="66" r="4.5" fill="#eef2f6"/></svg>'}
+function expHTML(){if(!EXP)return'';
+  const sc=a=>'<div class="sc n">'+a.map(([t,c])=>{const k=t.lastIndexOf(' ');return'<span class="'+c+'"><b>'+t.slice(0,k)+'</b>'+t.slice(k+1)+'</span>'}).join('')+'</div>';
+  if(EXP==='vix')return'<div class="exp"><div class="eh"><span class="gold" style="font-size:17px">VIX 恐慌指數是什麼？</span><span class="mu" style="font-size:13px">點卡片收起 ▲</span></div><div style="margin-top:6px">從美股 S&amp;P 500 選擇權價格算出，代表市場預期未來 30 天美股的波動大小。數字越高，大家越緊張。</div>'+sc([['15 以下 平靜','g'],['15–25 偏緊張','y'],['25 以上 恐慌','r']])+'<div class="mu" style="font-size:14px;line-height:1.7">常和美股反方向走：美股大跌時 VIX 會飆高。極度恐慌時往往接近低點，可當反向參考，不宜單獨用來買賣。</div><button class="tbtn" data-id="^VIX" style="margin-top:10px">看 VIX 走勢 ›</button></div>';
+  return'<div class="exp"><div class="eh"><span class="gold" style="font-size:17px">恐懼貪婪指數是什麼？</span><span class="mu" style="font-size:13px">點卡片收起 ▲</span></div><div style="margin-top:6px">加密貨幣市場的情緒指標（alternative.me），綜合比特幣的波動、成交量、社群熱度等算出，0～100。數字越高，大家越貪婪。</div>'+sc([['0–25 極度恐懼','g'],['25–45 恐懼','g2'],['45–55 中性','y'],['55–75 貪婪','r2'],['75+ 極度貪婪','r']])+'<div class="mu" style="font-size:14px;line-height:1.7">和 VIX 方向相反：VIX 高＝恐慌；恐懼貪婪低＝恐慌。極度恐懼時往往接近低點、極度貪婪時要小心追高，只能當參考。</div></div>'}
+
 /* ---------- 總覽 ---------- */
 function vHome(){
   const chipIds=[['^TWII','台股'],['^N225','日股'],['^HSI','港股'],['^GDAXI','歐股'],['^GSPC','美股']];
@@ -433,9 +453,9 @@ function vHome(){
   const idx=idxOrder().map(id=>BY[id]);/*tiles*/
   h+='<div class="gh" style="padding-top:18px"><span style="font-size:18px;color:var(--tx)">全球指數</span><span class="mu">長按拖曳可調整順序</span></div><div class="tiles n" id="tiles" data-drag="1" data-kind="idx">'+idx.map(it=>tileHTML(it)).join('')+'</div>';
   const vx=Q['^VIX']||{},vc=chg('^VIX'),vs=vc?sgn(vc.d):'fl';
-  const f=FNG,ang=f==null?-90:(-90+f*1.8),fs=f==null?'fl':f>=55?'up':f<45?'dn':'gold';
-  h+='<div class="two"><div class="mini" style="text-align:center;cursor:default"><div class="t" style="text-align:left">恐懼貪婪</div><svg width="140" height="78" viewBox="0 0 130 72"><path d="M12 66 A53 53 0 0 1 38 20" stroke="#2ebd85" stroke-width="8" fill="none"/><path d="M41 18 A53 53 0 0 1 89 18" stroke="#D4AF37" stroke-width="8" fill="none"/><path d="M92 20 A53 53 0 0 1 118 66" stroke="#f6465d" stroke-width="8" fill="none"/><g transform="rotate('+ang+' 65 66)"><line x1="65" y1="66" x2="65" y2="26" stroke="#e6edf3" stroke-width="2.2" stroke-linecap="round"/></g><circle cx="65" cy="66" r="4.5" fill="#e6edf3"/></svg><div class="n '+fs+'" style="font-size:26px;font-weight:500">'+(f==null?'—':f)+'</div><div class="mu" style="font-size:14px">'+(f==null?'加密市場情緒':fngTxt(f))+'</div></div>'
-   +'<div class="mini" data-id="^VIX"><div class="t">VIX 恐慌指數</div><div class="v n '+vs+'">'+fmt(vx.p,2)+'</div>'+pill(vc?vc.pc:null)+'<div style="margin-top:10px">'+spark(vx.s,130,34,COL[vs])+'</div><div class="mu" style="font-size:14px">'+(vx.p==null?'':vx.p<15?'市場情緒穩定':vx.p<25?'波動略升':'市場緊張')+'</div></div></div>';
+  const f=FNG,fs=f==null?'fl':f>=55?'up':f<45?'dn':'gold';const vv=vx.p,vcl=vv==null?'fl':vv<15?'dn':vv<25?'gold':'up',vang=vv==null?-90:-90+Math.max(0,Math.min(1,(vv-10)/25))*180;
+  h+='<div class="two"><div class="mini sent'+(EXP==='fng'?' on':'')+'" data-exp="fng"><div class="t"><span>恐懼貪婪</span><span class="mu" style="font-size:12px">加密 ⓘ</span></div>'+gauge(f==null?-90:-90+f*1.8)+'<div class="n '+fs+'" style="font-size:26px;font-weight:500">'+(f==null?'—':f)+'</div><div class="mu" style="font-size:14px">'+(f==null?'加密市場情緒':fngTxt(f))+'</div><div class="mu" style="font-size:12px;margin-top:4px">越高越貪婪</div></div>'
+   +'<div class="mini sent'+(EXP==='vix'?' on':'')+'" data-exp="vix"><div class="t"><span>VIX 恐慌</span><span class="mu" style="font-size:12px">美股 ⓘ</span></div>'+gauge(vang)+'<div class="n '+vcl+'" style="font-size:26px;font-weight:500">'+fmt(vv,2)+'</div><div class="mu" style="font-size:14px;white-space:nowrap">'+(vv==null?'美股波動預期':vv<15?'平靜':vv<25?'偏緊張':'恐慌')+(vc?' · <span class="'+vs+'">'+(vc.pc>0?'+':'')+fmt(vc.pc,2)+'%</span>':'')+'</div><div class="mu" style="font-size:12px;margin-top:4px">越高越恐慌</div></div></div>'+expHTML();
   h+='<div class="card"><div class="ch"><span>虛擬貨幣　<span class="live'+(wsOn?' on':'')+'"></span><span class="mu">'+(wsOn?'即時':'連線中')+'</span></span><span class="mu">比 24 小時前</span></div>'+['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT'].map(id=>rowHTML(BY[id])).join('')+'</div>';
   h+='<div class="two">'+['TWD=X','JPYTWD=X','GC=F','CL=F','^TNX','2330.TW'].map(id=>{const it=BY[id],q=Q[id]||{},c=chg(id),s=c?sgn(c.d):'fl',d=dec(it,q.p);return'<div class="mini" data-id="'+id+'"><div class="t">'+esc(it.n)+'</div><div class="v n '+s+'"><span class="pv'+flash('m'+id,q.p)+'" style="font-size:inherit;padding:0">'+fmt(q.p,d)+'</span></div>'+pill(c?c.pc:null)+'</div>'}).join('')+'</div>';
   const all=ITEMS.map(it=>({it,c:chg(it.id)})).filter(x=>x.c).sort((a,b)=>RANK==='up'?b.c.pc-a.c.pc:a.c.pc-b.c.pc).slice(0,6);
@@ -536,6 +556,7 @@ document.addEventListener('click',e=>{
   if(t.closest('#gadd')){gOpen=false;GROUPS.push({n:'自選 '+(GROUPS.length+1),ids:[]});GI=GROUPS.length-1;saveG();EDIT=false;CONF=null;SEL.clear();render(true);note('已新增「'+GROUPS[GI].n+'」，可在下方輸入代號加入；按「編輯」可改名');return}
   const ws=t.closest('[data-ws]');if(ws){WSORT=ws.dataset.ws;LS.set('gm_wsort',WSORT);render(true);return}
   if(t.closest('#gleft')||t.closest('#gright')){const dir=t.closest('#gleft')?-1:1,j=GI+dir;if(j<0||j>=GROUPS.length)return;[GROUPS[GI],GROUPS[j]]=[GROUPS[j],GROUPS[GI]];GI=j;saveG();render(true);return}
+  const ex=t.closest('[data-exp]');if(ex){EXP=EXP===ex.dataset.exp?null:ex.dataset.exp;render(true);return}
   if(t.closest('#godiag')){TAB='diag';drawNav();render(true);window.scrollTo(0,0);runDiag();return}
   if(t.closest('#drun')){runDiag();return}
   if(t.closest('#cyes')){const f=CONF&&CONF.fn;CONF=null;if(f)f();render(true);return}
@@ -688,7 +709,7 @@ window.addEventListener('resize',()=>{if(detId)drawChart()});
 function clocks(){const z=[['台北','Asia/Taipei'],['東京','Asia/Tokyo'],['倫敦','Europe/London'],['紐約','America/New_York']];$('#clk').innerHTML=z.map(([n,tz])=>{let t='';try{t=new Date().toLocaleTimeString('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit'})}catch(e){}return'<div>'+n+'<b class="n">'+t+'</b></div>'}).join('')}
 function ticker(){const ids=['^TWII','^N225','^GSPC','^IXIC','BTCUSDT','ETHUSDT','TWD=X','JPYTWD=X','GC=F','CL=F'];const one=ids.map(id=>{const it=BY[id],q=Q[id]||{},c=chg(id),s=c?sgn(c.d):'fl';return'<span>'+esc(it.n)+' <b class="'+s+'" style="font-weight:500">'+fmt(q.p,dec(it,q.p))+' '+(c?arrow(c.d)+fmt(Math.abs(c.pc),2)+'%':'')+'</b></span>'}).join('');$('#stk').innerHTML=one+one}
 function endSplash(){const s=$('#splash');if(s.classList.contains('hide'))return;s.classList.add('hide');setTimeout(()=>s.remove(),500)}
-$('#sauth').textContent=AUTH;$('#aauth').textContent=AUTH;
+$('#sauth').textContent=AUTH;$('#hauth').innerHTML='作者：ArchieKUO<br>'+VER;$('#aauth').textContent=AUTH;
 clocks();ticker();$('#splash').addEventListener('click',endSplash);setTimeout(endSplash,2000);
 
 /* ---------- 啟動 ---------- */
