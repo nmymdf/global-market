@@ -77,13 +77,13 @@ class MainActivity : ComponentActivity() {
 }
 
 // ---------------------------------------------------------------------------
-// 畫面（設計尺寸 480×480，圓形錶面；紅漲、綠跌）
+// 畫面（設計尺寸 480×480，圓形錶面；紅漲、綠跌；大字版）
 // ---------------------------------------------------------------------------
 
 private const val ROW0 = 470f
-private const val ROW_H = 96f
+private const val ROW_H = 118f
 private const val DIAG_H = 380f
-private const val EMPTY_H = 150f
+private const val EMPTY_H = 190f
 
 private const val UP = 0xFFF6465D.toInt()
 private const val DN = 0xFF2EBD85.toInt()
@@ -107,24 +107,26 @@ private fun mk(
 }
 
 private class Paints {
-    val label = mk(GRAY, 20f)
-    val small = mk(GRAY, 15f)
-    val gold = mk(GOLD, 16f, skew = -0.22f)
-    val big = mk(WHITE, 64f, bold = true)
-    val chg = mk(FLAT, 26f)
+    val label = mk(GRAY, 28f)
+    val cellLabel = mk(GRAY, 24f)
+    val gold = mk(GOLD, 18f, skew = -0.22f)
+    val big = mk(WHITE, 76f, bold = true)
+    val chg = mk(FLAT, 34f)
     val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF343A44.toInt()
         strokeWidth = 2f
         style = Paint.Style.STROKE
     }
-    val rowName = mk(WHITE, 26f, bold = true, align = Paint.Align.LEFT)
-    val rowCode = mk(GRAY, 16f, align = Paint.Align.LEFT)
-    val rowPrice = mk(WHITE, 30f, bold = true, align = Paint.Align.RIGHT)
-    val rowPct = mk(FLAT, 20f, align = Paint.Align.RIGHT)
-    val title = mk(WHITE, 26f, bold = true)
+    val rowName = mk(WHITE, 36f, bold = true, align = Paint.Align.LEFT)
+    val rowPrice = mk(WHITE, 44f, bold = true, align = Paint.Align.LEFT)
+    val rowPct = mk(FLAT, 32f, align = Paint.Align.RIGHT)
+    val title = mk(WHITE, 34f, bold = true)
+    val hint = mk(0xFFAEB4BF.toInt(), 24f)
+    val vol = mk(0xFFAEB4BF.toInt(), 24f)
+    val diagTitle = mk(WHITE, 26f, bold = true)
     val diag = mk(0xFFAEB4BF.toInt(), 17f)
     val diagBad = mk(0xFFFF8A8A.toInt(), 17f)
-    val white = mk(WHITE, 28f, bold = true)
+    val white = mk(WHITE, 40f, bold = true)
     val chevron = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF5B616C.toInt()
         strokeWidth = 3f
@@ -151,11 +153,12 @@ private fun stockDec(p: Double?): Int = when {
     else -> 0
 }
 
+private fun arrowOf(d: Double): String = if (d > 0) "▲" else if (d < 0) "▼" else "－"
+
 private fun changeText(diff: Double?, pct: Double?, d: Int): String {
     if (diff == null || pct == null) return "--"
-    val arrow = if (diff > 0) "▲" else if (diff < 0) "▼" else "－"
     val sign = if (pct > 0) "+" else ""
-    return arrow + " " + fmt(abs(diff), d) + "　" + sign + String.format(Locale.US, "%.2f", pct) + "%"
+    return arrowOf(diff) + " " + fmt(abs(diff), d) + "　" + sign + String.format(Locale.US, "%.2f", pct) + "%"
 }
 
 private fun contentH(n: Int): Float = ROW0 + (if (n == 0) EMPTY_H else n * ROW_H) + 30f + DIAG_H
@@ -175,37 +178,37 @@ private fun drawHeader(
 ) {
     if (oy < -480f) return
     val ix = st.index
-    c.drawText("加權指數", 240f, 104f + oy, p.label)
-    p.big.textSize = 64f
+    c.drawText("加權指數", 240f, 96f + oy, p.label)
+    p.big.textSize = 76f
     p.big.color = WHITE
-    fitText(c, fmt(ix?.price, 2), 240f, 170f + oy, p.big, 330f)
+    fitText(c, fmt(ix?.price, 2), 240f, 170f + oy, p.big, 390f)
     p.chg.color = colorOf(ix?.diff)
-    c.drawText(changeText(ix?.diff, ix?.pct, 2), 240f, 210f + oy, p.chg)
+    fitText(c, changeText(ix?.diff, ix?.pct, 2), 240f, 214f + oy, p.chg, 400f)
 
-    c.drawLine(190f, 238f + oy, 290f, 238f + oy, p.line)
+    c.drawLine(180f, 244f + oy, 300f, 244f + oy, p.line)
 
-    c.drawText(st.futLabel, 240f, 272f + oy, p.label)
+    fitText(c, st.futLabel, 240f, 282f + oy, p.label, 380f)
     val fx = st.fut
-    p.big.textSize = 56f
-    fitText(c, fmt(fx?.price, 0), 240f, 330f + oy, p.big, 300f)
+    p.big.textSize = 68f
+    fitText(c, fmt(fx?.price, 0), 240f, 352f + oy, p.big, 340f)
     p.chg.color = colorOf(fx?.diff)
-    c.drawText(changeText(fx?.diff, fx?.pct, 0), 240f, 368f + oy, p.chg)
+    fitText(c, changeText(fx?.diff, fx?.pct, 0), 240f, 396f + oy, p.chg, 330f)
 
-    c.drawText("更新 " + st.updateText, 240f, 410f + oy, p.small)
-    c.drawText("作者：ArchieKUO · v$ver", 240f, 438f + oy, p.gold)
+    c.drawText("作者：ArchieKUO · v$ver", 240f, 436f + oy, p.gold)
 
     val path = Path().apply {
-        moveTo(228f, 457f + oy); lineTo(240f, 466f + oy); lineTo(252f, 457f + oy)
+        moveTo(228f, 454f + oy); lineTo(240f, 464f + oy); lineTo(252f, 454f + oy)
     }
     c.drawPath(path, p.chevron)
 }
 
 private fun drawEmpty(c: android.graphics.Canvas, p: Paints, oy: Float) {
     val y = ROW0 + oy
-    if (y > 520f || y < -200f) return
-    c.drawText("尚未收到自選股", 240f, y + 36f, p.title)
-    c.drawText("請在手機「全球行情」的", 240f, y + 72f, p.diag)
-    c.drawText("「自選 1」加入台股，並打開 App", 240f, y + 98f, p.diag)
+    if (y > 520f || y < -220f) return
+    fitText(c, "尚未收到自選股", 240f, y + 50f, p.title, 380f)
+    fitText(c, "請在手機「全球行情」的", 240f, y + 100f, p.hint, 380f)
+    fitText(c, "「自選 1」加入台股", 240f, y + 134f, p.hint, 380f)
+    fitText(c, "並打開 App", 240f, y + 168f, p.hint, 380f)
 }
 
 private fun drawRow(c: android.graphics.Canvas, p: Paints, item: WatchItem, q: Quote?, top: Float) {
@@ -216,26 +219,26 @@ private fun drawRow(c: android.graphics.Canvas, p: Paints, item: WatchItem, q: Q
     val col = colorOf(q?.diff)
 
     p.rowName.alpha = a
-    fitText(c, q?.name ?: item.name, 92f, cy - 6f, p.rowName, 150f)
+    fitText(c, q?.name ?: item.name, 84f, top + 51f, p.rowName, 312f)
     p.rowName.alpha = 255
-
-    p.rowCode.alpha = a
-    c.drawText(item.id.substringBefore('.'), 92f, cy + 22f, p.rowCode)
-    p.rowCode.alpha = 255
 
     p.rowPrice.color = WHITE
     p.rowPrice.alpha = a
-    c.drawText(fmt(q?.price, stockDec(q?.price)), 388f, cy - 4f, p.rowPrice)
+    c.drawText(fmt(q?.price, stockDec(q?.price)), 84f, top + 97f, p.rowPrice)
+    p.rowPrice.alpha = 255
 
     p.rowPct.color = col
     p.rowPct.alpha = a
+    val d = q?.diff
     val pc = q?.pct
-    c.drawText(if (pc == null) "--" else (if (pc > 0) "+" else "") + String.format(Locale.US, "%.2f", pc) + "%", 388f, cy + 24f, p.rowPct)
+    val txt = if (d == null || pc == null) "--"
+    else arrowOf(d) + " " + (if (pc > 0) "+" else "") + String.format(Locale.US, "%.2f", pc) + "%"
+    c.drawText(txt, 396f, top + 97f, p.rowPct)
     p.rowPct.alpha = 255
 
     val old = p.line.alpha
     p.line.alpha = (a * 0.5f).toInt()
-    c.drawLine(92f, top + ROW_H - 1f, 388f, top + ROW_H - 1f, p.line)
+    c.drawLine(84f, top + ROW_H - 1f, 396f, top + ROW_H - 1f, p.line)
     p.line.alpha = old
 }
 
@@ -248,7 +251,7 @@ private fun clock(ms: Long): String {
 
 private fun drawDiag(c: android.graphics.Canvas, p: Paints, st: MarketState, top: Float, ver: String) {
     if (top > 480f || top + DIAG_H < 0f) return
-    c.drawText("資料狀態", 240f, top + 60f, p.title)
+    c.drawText("資料狀態", 240f, top + 60f, p.diagTitle)
     val lines = listOf(
         "股票　" + st.stockStatus,
         "台指期　" + st.futStatus,
@@ -265,33 +268,33 @@ private fun drawDiag(c: android.graphics.Canvas, p: Paints, st: MarketState, top
 }
 
 private fun drawDetail(c: android.graphics.Canvas, p: Paints, q: Quote?, item: WatchItem?, ver: String) {
-    c.drawRect(0f, 0f, 480f, 480f, Paint().apply { color = 0xFF000000.toInt() })
+    c.drawColor(0xFF000000.toInt())
     val name = q?.name ?: item?.name ?: ""
-    val code = (item?.id ?: q?.id ?: "").substringBefore('.')
-    p.white.textSize = 30f
-    fitText(c, name, 240f, 98f, p.white, 280f)
-    c.drawText(code, 240f, 124f, p.label)
+    p.white.textSize = 40f
+    p.white.color = WHITE
+    fitText(c, name, 240f, 92f, p.white, 300f)
 
     val d = stockDec(q?.price)
-    p.big.textSize = 64f
+    p.big.textSize = 84f
     p.big.color = WHITE
-    fitText(c, fmt(q?.price, d), 240f, 190f, p.big, 320f)
+    fitText(c, fmt(q?.price, d), 240f, 178f, p.big, 340f)
     p.chg.color = colorOf(q?.diff)
-    c.drawText(changeText(q?.diff, q?.pct, d), 240f, 228f, p.chg)
+    fitText(c, changeText(q?.diff, q?.pct, d), 240f, 222f, p.chg, 340f)
 
     fun cell(label: String, v: String, cx: Float, y: Float, color: Int) {
-        c.drawText(label, cx, y, p.label)
-        p.white.textSize = 28f
+        c.drawText(label, cx, y, p.cellLabel)
+        p.white.textSize = 40f
         p.white.color = color
-        fitText(c, v, cx, y + 32f, p.white, 130f)
+        fitText(c, v, cx, y + 40f, p.white, 140f)
         p.white.color = WHITE
     }
-    cell("開盤", fmt(q?.open, d), 168f, 268f, WHITE)
-    cell("最高", fmt(q?.high, d), 312f, 268f, UP)
-    cell("最低", fmt(q?.low, d), 168f, 330f, DN)
-    cell("昨收", fmt(q?.prev, d), 312f, 330f, WHITE)
-    c.drawText("成交量 " + (q?.volume?.let { String.format(Locale.US, "%,d", it) } ?: "--") + " 張", 240f, 392f, p.diag)
-    c.drawText("作者：ArchieKUO · v$ver", 240f, 424f, p.gold)
+    cell("開盤", fmt(q?.open, d), 160f, 268f, WHITE)
+    cell("最高", fmt(q?.high, d), 320f, 268f, UP)
+    cell("最低", fmt(q?.low, d), 160f, 348f, DN)
+    cell("昨收", fmt(q?.prev, d), 320f, 348f, WHITE)
+    val v = q?.volume?.let { String.format(Locale.US, "%,d", it) } ?: "--"
+    fitText(c, "量 $v 張", 240f, 424f, p.vol, 300f)
+    c.drawText("作者：ArchieKUO · v$ver", 240f, 454f, p.gold)
 }
 
 @Composable
