@@ -255,7 +255,7 @@ body{word-break:keep-all;overflow-wrap:normal}
 
 <script>
 'use strict';
-const VER='v1.4.2';
+const VER='v1.5.0';
 const AUTH='作者：ArchieKUO　'+VER;
 const $=s=>document.querySelector(s);
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -288,7 +288,10 @@ let Q=LS.get('gm_q',{});           // id -> {p,pv,o,h,l,v,s:[],ps,pe,t,h52,l52,q
 let GROUPS=LS.get('gm_groups',null);
 if(!Array.isArray(GROUPS)||!GROUPS.length){GROUPS=[{n:'自選 1',ids:LS.get('gm_watch',['^TWII','2330.TW','0050.TW','TWD=X','BTCUSDT','GC=F'])},{n:'自選 2',ids:[]},{n:'自選 3',ids:[]}]}
 let CONF=null,NOTE='',gOpen=false,GI=Math.min(LS.get('gm_gi',0),GROUPS.length-1),WSORT=LS.get('gm_wsort','c');
-function saveG(){LS.set('gm_groups',GROUPS);LS.set('gm_gi',GI)}
+/* 手錶同步：把「自選 1」裡的台股（最多 20 檔）送到手錶；清單沒變就不重送 */
+let LASTSYNC='';
+function syncWatch(){try{if(!window.Native||!window.Native.syncWatch)return;const g=GROUPS[0];if(!g)return;const out=[];for(const id of g.ids){if(id==='^TWII'||!twKey(id))continue;const it=BY[id];out.push({id:id,n:it?it.n:id});if(out.length>=20)break}const s=JSON.stringify({v:1,g:g.n,items:out});if(s===LASTSYNC)return;LASTSYNC=s;window.Native.syncWatch(s)}catch(e){}}
+function saveG(){LS.set('gm_groups',GROUPS);LS.set('gm_gi',GI);syncWatch()}
 function curIds(){return GROUPS[GI].ids}
 let TAB='home',FXREV=LS.get('gm_fxrev',false),RANK='up',EDIT=false,SEL=new Set();
 let CONV=LS.get('gm_conv',{a:1000,f:'USD',t:'TWD'});
@@ -415,7 +418,7 @@ async function twTick(){if(twBusy||document.hidden)return;twBusy=true;
       if(n<part.length&&part.length>1){for(const k of part){const q=Q[map[k]];if(q&&q.twAt&&Date.now()-q.twAt<8000)continue;if(twBad[k]&&Date.now()-twBad[k]<600000)continue;let got=0;try{got=eat(await twFetch([k]))}catch(e){}if(!got)twBad[k]=Date.now();else delete twBad[k]}}}
     lastTW=Date.now();dirty=true}catch(e){}
   twBusy=false}
-let twNext=0;setInterval(()=>{const now=Date.now();if(now>=twNext){twNext=now+(twOpen()?5000:60000);twTick()}},1000);
+setTimeout(syncWatch,2500);let twNext=0;setInterval(()=>{const now=Date.now();if(now>=twNext){twNext=now+(twOpen()?5000:60000);twTick()}},1000);
 function twDec(p){return p==null?2:p>=1000?0:p>=50?1:2}
 function twLive(id){const q=Q[id];return!!(q&&q.twAt&&Date.now()-q.twAt<60000)}
 

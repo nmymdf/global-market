@@ -41,6 +41,13 @@ public class MainActivity extends Activity {
 
     class Bridge {
         @JavascriptInterface
+        public void syncWatch(final String json) {
+            try {
+                WatchSync.send(getApplicationContext(), json);
+            } catch (Throwable ignored) { }
+        }
+
+        @JavascriptInterface
         public void get(final String id, final String url) {
             pool.execute(() -> {
                 String body = null;

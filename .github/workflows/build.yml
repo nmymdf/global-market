@@ -21,23 +21,25 @@ jobs:
         run: |
           mkdir -p android/app/src/main/assets
           cp web/index.html android/app/src/main/assets/index.html
-      - name: Build release APK
+      - name: Build release APKs (phone + watch)
         working-directory: android
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:assembleRelease --no-daemon --stacktrace 2>&1 | tee ../build.log
+          gradle :app:assembleRelease :wear:assembleRelease --no-daemon --stacktrace 2>&1 | tee ../build.log
       - name: Publish to apk branch
         run: |
           VER=$(cat VERSION | tr -d '[:space:]')
           mkdir out
           cp android/app/build/outputs/apk/release/app-release.apk "out/GlobalMarket-v${VER}.apk"
+          cp android/wear/build/outputs/apk/release/wear-release.apk "out/GlobalMarket-Watch-v${VER}.apk"
           cp web/index.html out/index.html
           touch out/.nojekyll
           cat > out/README.md <<MD
           # 全球行情 v${VER}
 
           - 手機下載 APK：https://github.com/${GITHUB_REPOSITORY}/raw/apk/GlobalMarket-v${VER}.apk
+          - 手錶（Galaxy Watch，台股行情）APK：https://github.com/${GITHUB_REPOSITORY}/raw/apk/GlobalMarket-Watch-v${VER}.apk
           - 網頁版：https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/
 
           *作者：ArchieKUO*

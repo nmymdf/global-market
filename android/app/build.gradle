@@ -23,3 +23,7 @@ android {
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
+dependencies {
+    // 把「自選 1」的台股清單送到手錶（Wear OS Data Layer）
+    implementation 'com.google.android.gms:play-services-wearable:18.2.0'
+}
