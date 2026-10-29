@@ -231,7 +231,7 @@ class Poller(private val st: MarketState) {
         if (id == chartId && now - chartAt < 55000L) return
         chartId = id
         chartAt = now
-        val url = "https://query1.finance.yahoo.com/v8/chart/" + URLEncoder.encode(id, "UTF-8") +
+        val url = "https://query1.finance.yahoo.com/v8/finance/chart/" + URLEncoder.encode(id, "UTF-8") +
             "?range=1d&interval=5m&includePrePost=false"
         val body = http(url)
         if (body == null) {
