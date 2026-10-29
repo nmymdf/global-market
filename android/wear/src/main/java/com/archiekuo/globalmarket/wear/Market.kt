@@ -38,7 +38,14 @@ data class Quote(
         }
 }
 
+/** 當天走勢（5 分鐘一點）。 */
+data class Chart(val pts: List<Double>, val prev: Double?, val at: Long)
+
 class MarketState {
+    var charts by mutableStateOf<Map<String, Chart>>(emptyMap())
+    var chartMsg by mutableStateOf("")
+    var chartStatus by mutableStateOf("尚未抓取")
+    var detailPage by mutableStateOf(0)
     var items by mutableStateOf<List<WatchItem>>(emptyList())
     var quotes by mutableStateOf<Map<String, Quote>>(emptyMap())
     var index by mutableStateOf<Quote?>(null)

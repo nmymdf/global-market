@@ -64,10 +64,18 @@ class Poller(private val st: MarketState) {
             } catch (t: Throwable) {
                 st.futStatus = "失敗：" + (t.message ?: t.javaClass.simpleName)
             }
+            try {
+                fetchChart()
+            } catch (e: InterruptedException) {
+                return
+            } catch (t: Throwable) {
+                st.chartStatus = "失敗：" + (t.message ?: t.javaClass.simpleName)
+            }
+            val seen = st.detailId
             val delay = if (Tw.anyOpen()) 5000L else 300000L
             var waited = 0L
             try {
-                while (running && waited < delay && !kicked) {
+                while (running && waited < delay && !kicked && st.detailId == seen) {
                     Thread.sleep(500)
                     waited += 500
                 }
@@ -205,6 +213,52 @@ class Poller(private val st: MarketState) {
             if (j.has("msgArray")) j.getJSONArray("msgArray") else null
         } catch (e: Exception) {
             null
+        }
+    }
+
+    // ---------------- 當天走勢圖（只在打開某一檔時抓）----------------
+
+    private var chartId: String? = null
+    private var chartAt = 0L
+
+    private fun fetchChart() {
+        val id = st.detailId
+        if (id == null) {
+            chartId = null
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (id == chartId && now - chartAt < 55000L) return
+        chartId = id
+        chartAt = now
+        val url = "https://query1.finance.yahoo.com/v8/chart/" + URLEncoder.encode(id, "UTF-8") +
+            "?range=1d&interval=5m&includePrePost=false"
+        val body = http(url)
+        if (body == null) {
+            st.chartMsg = "走勢圖暫時無法取得"
+            st.chartStatus = "失敗：$lastHttp"
+            return
+        }
+        try {
+            val r = JSONObject(body).getJSONObject("chart").getJSONArray("result").getJSONObject(0)
+            val meta = r.optJSONObject("meta")
+            val prev = meta?.optDouble("chartPreviousClose", Double.NaN)?.takeIf { !it.isNaN() && it > 0 }
+            val closes = r.getJSONObject("indicators").getJSONArray("quote").getJSONObject(0).getJSONArray("close")
+            val list = ArrayList<Double>()
+            for (i in 0 until closes.length()) {
+                if (!closes.isNull(i)) list.add(closes.getDouble(i))
+            }
+            st.charts = st.charts + (id to Chart(list, prev, now))
+            if (list.size < 2) {
+                st.chartMsg = "走勢圖暫時無法取得"
+                st.chartStatus = "資料點不足（" + list.size + "）"
+            } else {
+                st.chartMsg = ""
+                st.chartStatus = "OK " + list.size + " 點　" + hms()
+            }
+        } catch (e: Exception) {
+            st.chartMsg = "走勢圖暫時無法取得"
+            st.chartStatus = "失敗：解析錯誤（" + body.take(50) + "）"
         }
     }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -127,6 +128,20 @@ private class Paints {
     val diag = mk(0xFFAEB4BF.toInt(), 17f)
     val diagBad = mk(0xFFFF8A8A.toInt(), 17f)
     val white = mk(WHITE, 40f, bold = true)
+    val chartLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = FLAT
+        strokeWidth = 4f
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    val chartDash = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF6B727D.toInt()
+        strokeWidth = 2f
+        style = Paint.Style.STROKE
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f, 8f), 0f)
+    }
+    val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     val chevron = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF5B616C.toInt()
         strokeWidth = 3f
@@ -255,6 +270,7 @@ private fun drawDiag(c: android.graphics.Canvas, p: Paints, st: MarketState, top
     val lines = listOf(
         "股票　" + st.stockStatus,
         "台指期　" + st.futStatus,
+        "走勢圖　" + st.chartStatus,
         "清單　" + clock(st.syncAt) + "（" + st.items.size + " 檔）",
         "來源　證交所／期交所"
     )
@@ -267,34 +283,100 @@ private fun drawDiag(c: android.graphics.Canvas, p: Paints, st: MarketState, top
     c.drawText("作者：ArchieKUO · v$ver", 240f, top + 300f, p.gold)
 }
 
-private fun drawDetail(c: android.graphics.Canvas, p: Paints, q: Quote?, item: WatchItem?, ver: String) {
+private fun drawChart(c: android.graphics.Canvas, p: Paints, q: Quote?, chart: Chart?, msg: String) {
+    val x0 = 70f
+    val y0 = 214f
+    val w = 340f
+    val h = 112f
+    val pts = chart?.pts
+    if (chart == null || pts == null || pts.size < 2) {
+        c.drawText(if (msg.isNotEmpty()) msg else "走勢圖載入中…", 240f, y0 + h / 2f + 8f, p.hint)
+        return
+    }
+    val live = q?.price
+    val series = if (live != null) pts.dropLast(1) + live else pts
+    val prev = q?.prev ?: chart.prev
+    var lo = series.min()
+    var hi = series.max()
+    if (prev != null) {
+        lo = min(lo, prev)
+        hi = max(hi, prev)
+    }
+    if (hi - lo < 1e-9) {
+        hi += 1.0
+        lo -= 1.0
+    }
+    val pad = (hi - lo) * 0.08
+    lo -= pad
+    hi += pad
+    val total = max(54, series.size)
+    fun px(i: Int): Float = x0 + i.toFloat() / (total - 1) * w
+    fun py(v: Double): Float = (y0 + (hi - v) / (hi - lo) * h).toFloat()
+
+    if (prev != null) c.drawLine(x0, py(prev), x0 + w, py(prev), p.chartDash)
+    val path = Path()
+    for ((i, v) in series.withIndex()) {
+        if (i == 0) path.moveTo(px(i), py(v)) else path.lineTo(px(i), py(v))
+    }
+    p.chartLine.color = colorOf(if (prev != null) series.last() - prev else null)
+    c.drawPath(path, p.chartLine)
+
+    val iMax = series.indexOf(series.max())
+    val iMin = series.indexOf(series.min())
+    p.dot.color = UP
+    c.drawCircle(px(iMax), py(series[iMax]), 6f, p.dot)
+    p.dot.color = DN
+    c.drawCircle(px(iMin), py(series[iMin]), 6f, p.dot)
+}
+
+private fun drawDetail(
+    c: android.graphics.Canvas, p: Paints, q: Quote?, item: WatchItem?,
+    chart: Chart?, msg: String, page: Int, ver: String
+) {
     c.drawColor(0xFF000000.toInt())
     val name = q?.name ?: item?.name ?: ""
-    p.white.textSize = 40f
+    p.white.textSize = 38f
     p.white.color = WHITE
-    fitText(c, name, 240f, 92f, p.white, 300f)
-
+    fitText(c, name, 240f, 84f, p.white, 300f)
     val d = stockDec(q?.price)
-    p.big.textSize = 84f
-    p.big.color = WHITE
-    fitText(c, fmt(q?.price, d), 240f, 178f, p.big, 340f)
-    p.chg.color = colorOf(q?.diff)
-    fitText(c, changeText(q?.diff, q?.pct, d), 240f, 222f, p.chg, 340f)
 
     fun cell(label: String, v: String, cx: Float, y: Float, color: Int) {
         c.drawText(label, cx, y, p.cellLabel)
-        p.white.textSize = 40f
+        p.white.textSize = 38f
         p.white.color = color
         fitText(c, v, cx, y + 40f, p.white, 140f)
         p.white.color = WHITE
     }
-    cell("開盤", fmt(q?.open, d), 160f, 268f, WHITE)
-    cell("最高", fmt(q?.high, d), 320f, 268f, UP)
-    cell("最低", fmt(q?.low, d), 160f, 348f, DN)
-    cell("昨收", fmt(q?.prev, d), 320f, 348f, WHITE)
-    val v = q?.volume?.let { String.format(Locale.US, "%,d", it) } ?: "--"
-    fitText(c, "量 $v 張", 240f, 424f, p.vol, 300f)
-    c.drawText("作者：ArchieKUO · v$ver", 240f, 454f, p.gold)
+
+    fun row(label: String, v: String, y: Float, color: Int) {
+        c.drawText(label, 240f, y, p.cellLabel)
+        p.white.textSize = 52f
+        p.white.color = color
+        fitText(c, v, 240f, y + 50f, p.white, 300f)
+        p.white.color = WHITE
+    }
+
+    if (page == 0) {
+        p.big.textSize = 68f
+        p.big.color = WHITE
+        fitText(c, fmt(q?.price, d), 240f, 156f, p.big, 340f)
+        p.chg.color = colorOf(q?.diff)
+        fitText(c, changeText(q?.diff, q?.pct, d), 240f, 196f, p.chg, 340f)
+
+        drawChart(c, p, q, chart, msg)
+
+        val pts = chart?.pts
+        val hi = q?.high ?: pts?.maxOrNull()
+        val lo = q?.low ?: pts?.minOrNull()
+        cell("最高", fmt(hi, d), 165f, 362f, UP)
+        cell("最低", fmt(lo, d), 315f, 362f, DN)
+    } else {
+        row("開盤", fmt(q?.open, d), 140f, WHITE)
+        row("昨收", fmt(q?.prev, d), 240f, WHITE)
+        val v = q?.volume?.let { String.format(Locale.US, "%,d", it) } ?: "--"
+        row("成交量（張）", v, 340f, WHITE)
+    }
+    c.drawText("作者：ArchieKUO · v$ver", 240f, 446f, p.gold)
 }
 
 @Composable
@@ -316,7 +398,10 @@ fun AppRoot(st: MarketState) {
         used
     }
 
-    BackHandler(enabled = st.detailId != null) { st.detailId = null }
+    BackHandler(enabled = st.detailId != null) {
+        st.detailId = null
+        st.detailPage = 0
+    }
 
     Canvas(
         modifier = Modifier
@@ -328,12 +413,35 @@ fun AppRoot(st: MarketState) {
                 orientation = Orientation.Vertical,
                 enabled = st.detailId == null
             )
+            .then(
+                if (st.detailId != null) {
+                    Modifier.pointerInput(Unit) {
+                        var total = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { total = 0f },
+                            onDragEnd = {
+                                val id = st.detailId
+                                if (id != null) {
+                                    val i = st.items.indexOfFirst { it.id == id }
+                                    val j = if (total < -60f) i + 1 else if (total > 60f) i - 1 else i
+                                    if (i >= 0 && j != i && j in st.items.indices) {
+                                        st.chartMsg = ""
+                                        st.detailId = st.items[j].id
+                                    }
+                                }
+                            },
+                            onDragCancel = { total = 0f },
+                            onVerticalDrag = { _, dy -> total += dy }
+                        )
+                    }
+                } else Modifier
+            )
             .pointerInput(Unit) {
                 detectTapGestures { off ->
                     val s = min(sz.width, sz.height) / 480f
                     if (s <= 0f) return@detectTapGestures
                     if (st.detailId != null) {
-                        st.detailId = null
+                        st.detailPage = 1 - st.detailPage
                         return@detectTapGestures
                     }
                     val oy = (sz.height - 480f * s) / 2f
@@ -341,7 +449,11 @@ fun AppRoot(st: MarketState) {
                     val count = st.items.size
                     if (count > 0 && contentY >= ROW0 && contentY < ROW0 + count * ROW_H) {
                         val i = ((contentY - ROW0) / ROW_H).toInt()
-                        if (i in 0 until count) st.detailId = st.items[i].id
+                        if (i in 0 until count) {
+                            st.detailPage = 0
+                            st.chartMsg = ""
+                            st.detailId = st.items[i].id
+                        }
                     }
                 }
             }
@@ -357,7 +469,7 @@ fun AppRoot(st: MarketState) {
             val did = st.detailId
             if (did != null) {
                 val item = st.items.firstOrNull { it.id == did }
-                drawDetail(nc, paints, st.quotes[did], item, ver)
+                drawDetail(nc, paints, st.quotes[did], item, st.charts[did], st.chartMsg, st.detailPage, ver)
             } else {
                 val scroll = st.scrollPx / s
                 val items = st.items
