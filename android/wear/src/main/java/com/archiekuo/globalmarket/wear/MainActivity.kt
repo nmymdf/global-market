@@ -422,11 +422,13 @@ fun AppRoot(st: MarketState) {
                             onDragEnd = {
                                 val id = st.detailId
                                 if (id != null) {
-                                    val i = st.items.indexOfFirst { it.id == id }
+                                    // 順序：加權指數 → 自選股依序
+                                    val ids = listOf("^TWII") + st.items.map { it.id }
+                                    val i = ids.indexOf(id)
                                     val j = if (total < -60f) i + 1 else if (total > 60f) i - 1 else i
-                                    if (i >= 0 && j != i && j in st.items.indices) {
+                                    if (i >= 0 && j != i && j in ids.indices) {
                                         st.chartMsg = ""
-                                        st.detailId = st.items[j].id
+                                        st.detailId = ids[j]
                                     }
                                 }
                             },
@@ -446,6 +448,13 @@ fun AppRoot(st: MarketState) {
                     }
                     val oy = (sz.height - 480f * s) / 2f
                     val contentY = (off.y - oy) / s + st.scrollPx / s
+                    if (contentY >= 60f && contentY < 250f) {
+                        // 點加權指數 → 開大盤走勢圖
+                        st.detailPage = 0
+                        st.chartMsg = ""
+                        st.detailId = "^TWII"
+                        return@detectTapGestures
+                    }
                     val count = st.items.size
                     if (count > 0 && contentY >= ROW0 && contentY < ROW0 + count * ROW_H) {
                         val i = ((contentY - ROW0) / ROW_H).toInt()
@@ -469,7 +478,7 @@ fun AppRoot(st: MarketState) {
             val did = st.detailId
             if (did != null) {
                 val item = st.items.firstOrNull { it.id == did }
-                drawDetail(nc, paints, st.quotes[did], item, st.charts[did], st.chartMsg, st.detailPage, ver)
+                drawDetail(nc, paints, if (did == "^TWII") st.index else st.quotes[did], item, st.charts[did], st.chartMsg, st.detailPage, ver)
             } else {
                 val scroll = st.scrollPx / s
                 val items = st.items
